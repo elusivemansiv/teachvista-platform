@@ -1,4 +1,5 @@
-import { createFileRoute, Link, notFound, useServerFn } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Suspense } from "react";
 import { getCourseBySlug } from "@/lib/courses.functions";
