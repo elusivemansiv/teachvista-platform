@@ -68,7 +68,7 @@ function BrowseInner() {
       <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => navigate({ search: (s) => ({ ...s, category: undefined }) })}
+            onClick={() => navigate({ search: (s: { category?: string; q?: string }) => ({ ...s, category: undefined }) })}
             className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
               !search.category ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/80"
             }`}
@@ -78,7 +78,7 @@ function BrowseInner() {
           {CATEGORIES.map((c) => (
             <button
               key={c.value}
-              onClick={() => navigate({ search: (s) => ({ ...s, category: c.value }) })}
+              onClick={() => navigate({ search: (s: { category?: string; q?: string }) => ({ ...s, category: c.value }) })}
               className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
                 search.category === c.value ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/80"
               }`}
