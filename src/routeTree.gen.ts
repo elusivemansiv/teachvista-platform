@@ -11,8 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CourseSlugRouteImport } from './routes/course.$slug'
+import { Route as AuthenticatedTeacherRouteImport } from './routes/_authenticated/teacher'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedTeacherUploadRouteImport } from './routes/_authenticated/teacher.upload'
 
 const BrowseRoute = BrowseRouteImport.update({
   id: '/browse',
@@ -22,6 +26,10 @@ const BrowseRoute = BrowseRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -34,36 +42,86 @@ const CourseSlugRoute = CourseSlugRouteImport.update({
   path: '/course/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTeacherRoute = AuthenticatedTeacherRouteImport.update({
+  id: '/teacher',
+  path: '/teacher',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTeacherUploadRoute =
+  AuthenticatedTeacherUploadRouteImport.update({
+    id: '/upload',
+    path: '/upload',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/browse': typeof BrowseRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/course/$slug': typeof CourseSlugRoute
+  '/teacher/upload': typeof AuthenticatedTeacherUploadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/browse': typeof BrowseRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/course/$slug': typeof CourseSlugRoute
+  '/teacher/upload': typeof AuthenticatedTeacherUploadRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/browse': typeof BrowseRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/course/$slug': typeof CourseSlugRoute
+  '/_authenticated/teacher/upload': typeof AuthenticatedTeacherUploadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/browse' | '/course/$slug'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/browse'
+    | '/dashboard'
+    | '/teacher'
+    | '/course/$slug'
+    | '/teacher/upload'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/browse' | '/course/$slug'
-  id: '__root__' | '/' | '/auth' | '/browse' | '/course/$slug'
+  to:
+    | '/'
+    | '/auth'
+    | '/browse'
+    | '/dashboard'
+    | '/teacher'
+    | '/course/$slug'
+    | '/teacher/upload'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/browse'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/teacher'
+    | '/course/$slug'
+    | '/_authenticated/teacher/upload'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   BrowseRoute: typeof BrowseRoute
   CourseSlugRoute: typeof CourseSlugRoute
@@ -85,6 +143,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -99,11 +164,57 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CourseSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/teacher': {
+      id: '/_authenticated/teacher'
+      path: '/teacher'
+      fullPath: '/teacher'
+      preLoaderRoute: typeof AuthenticatedTeacherRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/teacher/upload': {
+      id: '/_authenticated/teacher/upload'
+      path: '/upload'
+      fullPath: '/teacher/upload'
+      preLoaderRoute: typeof AuthenticatedTeacherUploadRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
   }
 }
 
+interface AuthenticatedTeacherRouteChildren {
+  AuthenticatedTeacherUploadRoute: typeof AuthenticatedTeacherUploadRoute
+}
+
+const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
+  AuthenticatedTeacherUploadRoute: AuthenticatedTeacherUploadRoute,
+}
+
+const AuthenticatedTeacherRouteWithChildren =
+  AuthenticatedTeacherRoute._addFileChildren(AuthenticatedTeacherRouteChildren)
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedTeacherRoute: typeof AuthenticatedTeacherRouteWithChildren
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedTeacherRoute: AuthenticatedTeacherRouteWithChildren,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   BrowseRoute: BrowseRoute,
   CourseSlugRoute: CourseSlugRoute,
