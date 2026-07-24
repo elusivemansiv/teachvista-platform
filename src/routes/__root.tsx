@@ -35,12 +35,27 @@ function NotFoundComponent() {
   );
 }
 
+function formatError(error: unknown): string {
+  if (error instanceof Error) return error.stack || `${error.name}: ${error.message}`;
+  if (error instanceof Response) return `Response ${error.status} ${error.statusText}${error.url ? ` at ${error.url}` : ""}`;
+  if (error && typeof error === "object") {
+    try {
+      return JSON.stringify(error, Object.getOwnPropertyNames(error as object), 2);
+    } catch {
+      return String(error);
+    }
+  }
+  return String(error);
+}
+
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
+  const formatted = formatError(error);
+  console.error("[Route error]", formatted, error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
+    reportLovableError(error, { boundary: "tanstack_root_error_component", formatted });
+  }, [error, formatted]);
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -122,13 +137,27 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
+    const onError = (e: ErrorEvent) => {
+      console.error("[window.error]", e.message, e.error?.stack || e.error, `${e.filename}:${e.lineno}:${e.colno}`);
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const r = e.reason;
+      console.error("[unhandledrejection]", r instanceof Error ? (r.stack || r.message) : formatError(r), r);
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+      sub.subscription.unsubscribe();
+    };
   }, [router, queryClient]);
+
 
   return (
     <QueryClientProvider client={queryClient}>
