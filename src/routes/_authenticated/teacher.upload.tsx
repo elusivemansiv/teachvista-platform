@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,18 @@ import { ArrowLeft, ImagePlus, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/teacher/upload")({
+  beforeLoad: ({ context }) => {
+    if ((context as { role?: string }).role !== "teacher") {
+      throw redirect({ to: "/dashboard" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Upload course — BandPath teacher portal" },
       { name: "description", content: "Create and upload a new IELTS video course on BandPath." },
     ],
   }),
+
   component: () => (
     <AppShell>
       <UploadForm />

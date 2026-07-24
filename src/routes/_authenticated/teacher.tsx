@@ -1,10 +1,15 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Award, BookOpen, Star, Upload, Users } from "lucide-react";
 import { CATEGORIES } from "@/lib/courses";
 
 export const Route = createFileRoute("/_authenticated/teacher")({
+  beforeLoad: ({ context }) => {
+    if ((context as { role?: string }).role !== "teacher") {
+      throw redirect({ to: "/dashboard" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Teacher portal — BandPath" },
@@ -17,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/teacher")({
     </AppShell>
   ),
 });
+
 
 function TeacherHome() {
   const stats = [
