@@ -137,13 +137,27 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
+    const onError = (e: ErrorEvent) => {
+      console.error("[window.error]", e.message, e.error?.stack || e.error, `${e.filename}:${e.lineno}:${e.colno}`);
+    };
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const r = e.reason;
+      console.error("[unhandledrejection]", r instanceof Error ? (r.stack || r.message) : formatError(r), r);
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+      sub.subscription.unsubscribe();
+    };
   }, [router, queryClient]);
+
 
   return (
     <QueryClientProvider client={queryClient}>
