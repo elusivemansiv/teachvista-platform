@@ -11,6 +11,11 @@ import { CATEGORIES } from "@/lib/courses";
 import { Target, Flame, Trophy, Calendar } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  beforeLoad: ({ context }) => {
+    if ((context as { role?: string }).role === "teacher") {
+      throw redirect({ to: "/teacher" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Your dashboard — BandPath" },
@@ -25,6 +30,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
     </AppShell>
   ),
 });
+
 
 function Dashboard() {
   const fetchCourses = useServerFn(listCourses);
