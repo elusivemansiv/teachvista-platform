@@ -14,16 +14,24 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useRouterState } from "@tanstack/react-router";
+import { getRouteApi } from "@tanstack/react-router";
 import { GraduationCap, LayoutDashboard, Compass, PlayCircle, Upload, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 
-const items = [
+const learnerItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Browse courses", url: "/browse", icon: Compass },
   { title: "My learning", url: "/dashboard", icon: PlayCircle },
-  { title: "Teacher portal", url: "/teacher", icon: Upload },
 ];
+
+const teacherItems = [
+  { title: "Teacher portal", url: "/teacher", icon: LayoutDashboard },
+  { title: "Upload course", url: "/teacher/upload", icon: Upload },
+  { title: "Browse courses", url: "/browse", icon: Compass },
+];
+
+const authRouteApi = getRouteApi("/_authenticated");
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -43,6 +51,8 @@ function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (r) => r.location.pathname });
+  const { role } = authRouteApi.useRouteContext();
+  const items = role === "teacher" ? teacherItems : learnerItems;
 
   return (
     <Sidebar collapsible="icon">
@@ -73,6 +83,7 @@ function AppSidebar() {
     </Sidebar>
   );
 }
+
 
 function TopBar() {
   const router = useRouter();
