@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CourseSlugRouteImport } from './routes/course.$slug'
 import { Route as AuthenticatedTeacherRouteImport } from './routes/_authenticated/teacher'
+import { Route as AuthenticatedMyCoursesRouteImport } from './routes/_authenticated/my-courses'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedTeacherUploadRouteImport } from './routes/_authenticated/teacher.upload'
 
@@ -47,6 +48,11 @@ const AuthenticatedTeacherRoute = AuthenticatedTeacherRouteImport.update({
   path: '/teacher',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMyCoursesRoute = AuthenticatedMyCoursesRouteImport.update({
+  id: '/my-courses',
+  path: '/my-courses',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/browse': typeof BrowseRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/my-courses': typeof AuthenticatedMyCoursesRoute
   '/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/course/$slug': typeof CourseSlugRoute
   '/teacher/upload': typeof AuthenticatedTeacherUploadRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/browse': typeof BrowseRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/my-courses': typeof AuthenticatedMyCoursesRoute
   '/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/course/$slug': typeof CourseSlugRoute
   '/teacher/upload': typeof AuthenticatedTeacherUploadRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/browse': typeof BrowseRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/my-courses': typeof AuthenticatedMyCoursesRoute
   '/_authenticated/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/course/$slug': typeof CourseSlugRoute
   '/_authenticated/teacher/upload': typeof AuthenticatedTeacherUploadRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/browse'
     | '/dashboard'
+    | '/my-courses'
     | '/teacher'
     | '/course/$slug'
     | '/teacher/upload'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/browse'
     | '/dashboard'
+    | '/my-courses'
     | '/teacher'
     | '/course/$slug'
     | '/teacher/upload'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/browse'
     | '/_authenticated/dashboard'
+    | '/_authenticated/my-courses'
     | '/_authenticated/teacher'
     | '/course/$slug'
     | '/_authenticated/teacher/upload'
@@ -171,6 +183,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeacherRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/my-courses': {
+      id: '/_authenticated/my-courses'
+      path: '/my-courses'
+      fullPath: '/my-courses'
+      preLoaderRoute: typeof AuthenticatedMyCoursesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -201,11 +220,13 @@ const AuthenticatedTeacherRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedMyCoursesRoute: typeof AuthenticatedMyCoursesRoute
   AuthenticatedTeacherRoute: typeof AuthenticatedTeacherRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedMyCoursesRoute: AuthenticatedMyCoursesRoute,
   AuthenticatedTeacherRoute: AuthenticatedTeacherRouteWithChildren,
 }
 
