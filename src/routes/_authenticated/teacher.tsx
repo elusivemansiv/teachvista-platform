@@ -1,8 +1,13 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { Suspense } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { Award, BookOpen, Star, Upload, Users } from "lucide-react";
-import { CATEGORIES } from "@/lib/courses";
+import { Progress } from "@/components/ui/progress";
+import { Award, BookOpen, Eye, Star, Upload, Users } from "lucide-react";
+import { CATEGORIES, categoryLabel } from "@/lib/courses";
+import { listTeacherCourseAnalytics } from "@/lib/teacher.functions";
 
 export const Route = createFileRoute("/_authenticated/teacher")({
   beforeLoad: ({ context }) => {
@@ -18,25 +23,32 @@ export const Route = createFileRoute("/_authenticated/teacher")({
   }),
   component: () => (
     <AppShell>
-      <TeacherHome />
+      <Suspense fallback={<div className="text-muted-foreground">Loading portal…</div>}>
+        <TeacherHome />
+      </Suspense>
     </AppShell>
   ),
 });
 
-
 function TeacherHome() {
-  const stats = [
-    { label: "Courses published", value: "8", icon: BookOpen },
-    { label: "Total students", value: "12,340", icon: Users },
-    { label: "Average rating", value: "4.8", icon: Star },
-    { label: "Teacher rank", value: "Top 5%", icon: Award },
-  ];
+  const fetchAnalytics = useServerFn(listTeacherCourseAnalytics);
+  const { data: analytics } = useSuspenseQuery({
+    queryKey: ["teacher-analytics"],
+    queryFn: () => fetchAnalytics(),
+  });
 
-  const myCourses = [
-    { title: "IELTS Listening Mastery: Sections 1–4", category: "Listening", students: 4210, rating: 4.9, status: "Published" },
-    { title: "Grammar for IELTS: Complex Structures", category: "Grammar", students: 1780, rating: 4.5, status: "Published" },
-    { title: "Reading: True / False / Not Given", category: "Reading", students: 2340, rating: 4.8, status: "Published" },
-    { title: "Speaking Coaching (new)", category: "Speaking", students: 0, rating: 0, status: "Draft" },
+  const totalStudents = analytics.reduce((s, c) => s + c.student_count, 0);
+  const totalViews = analytics.reduce((s, c) => s + c.views_count, 0);
+  const avgRating = analytics.length
+    ? (analytics.reduce((s, c) => s + Number(c.rating || 0), 0) / analytics.length).toFixed(1)
+    : "—";
+  const published = analytics.filter((c) => c.is_published).length;
+
+  const stats = [
+    { label: "Courses published", value: `${published}`, icon: BookOpen },
+    { label: "Total students", value: totalStudents.toLocaleString(), icon: Users },
+    { label: "Total views", value: totalViews.toLocaleString(), icon: Eye },
+    { label: "Average rating", value: avgRating, icon: Star },
   ];
 
   return (
@@ -70,45 +82,73 @@ function TeacherHome() {
 
       <section className="rounded-3xl border border-border bg-card p-6">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-xl font-bold">My courses</h2>
+          <div>
+            <h2 className="font-display text-xl font-bold">Course analytics</h2>
+            <p className="text-sm text-muted-foreground">Views, enrollments and completion for each of your courses.</p>
+          </div>
           <Link to="/teacher/upload">
             <Button size="sm" className="rounded-full">
               <Upload className="mr-1.5 h-4 w-4" /> New course
             </Button>
           </Link>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
-                <th className="py-3">Course</th>
-                <th className="py-3">Category</th>
-                <th className="py-3 text-right">Students</th>
-                <th className="py-3 text-right">Rating</th>
-                <th className="py-3 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {myCourses.map((c) => (
-                <tr key={c.title}>
-                  <td className="py-3 pr-4 font-semibold">{c.title}</td>
-                  <td className="py-3 text-muted-foreground">{c.category}</td>
-                  <td className="py-3 text-right">{c.students.toLocaleString()}</td>
-                  <td className="py-3 text-right">{c.rating || "—"}</td>
-                  <td className="py-3 text-right">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                        c.status === "Published" ? "bg-primary-soft text-primary" : "bg-secondary text-muted-foreground"
-                      }`}
-                    >
-                      {c.status}
-                    </span>
-                  </td>
+
+        {analytics.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+            You haven't published any courses yet. Upload your first course to start seeing analytics.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
+                  <th className="py-3">Course</th>
+                  <th className="py-3">Category</th>
+                  <th className="py-3 text-right">Views</th>
+                  <th className="py-3 text-right">Enrollments</th>
+                  <th className="py-3">Avg progress</th>
+                  <th className="py-3 text-right">Last uploaded</th>
+                  <th className="py-3 text-right">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {analytics.map((c) => (
+                  <tr key={c.id}>
+                    <td className="py-3 pr-4 font-semibold">
+                      <Link to="/course/$slug" params={{ slug: c.slug }} className="hover:text-primary">
+                        {c.title}
+                      </Link>
+                      {c.completed_count > 0 && (
+                        <div className="text-xs font-normal text-muted-foreground">{c.completed_count} completed</div>
+                      )}
+                    </td>
+                    <td className="py-3 text-muted-foreground">{categoryLabel(c.category)}</td>
+                    <td className="py-3 text-right tabular-nums">{c.views_count.toLocaleString()}</td>
+                    <td className="py-3 text-right tabular-nums">{c.student_count.toLocaleString()}</td>
+                    <td className="py-3 pr-4">
+                      <div className="flex items-center gap-2">
+                        <Progress value={c.avg_progress} className="h-2 w-24" />
+                        <span className="text-xs tabular-nums text-muted-foreground">{c.avg_progress}%</span>
+                      </div>
+                    </td>
+                    <td className="py-3 text-right text-xs text-muted-foreground">
+                      {new Date(c.last_uploaded_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                    </td>
+                    <td className="py-3 text-right">
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          c.is_published ? "bg-primary-soft text-primary" : "bg-secondary text-muted-foreground"
+                        }`}
+                      >
+                        {c.is_published ? "Published" : "Draft"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="rounded-3xl border border-border bg-card p-6">
@@ -120,6 +160,9 @@ function TeacherHome() {
               {c.emoji} {c.label}
             </span>
           ))}
+        </div>
+        <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
+          <Award className="h-4 w-4 text-accent" /> Keep publishing to grow your rank.
         </div>
       </section>
     </div>
