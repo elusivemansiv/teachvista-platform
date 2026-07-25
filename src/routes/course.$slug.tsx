@@ -1,13 +1,17 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { Suspense } from "react";
-import { getCourseBySlug } from "@/lib/courses.functions";
+import { useSuspenseQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Suspense, useEffect } from "react";
+import { getCourseBySlug, recordCourseView } from "@/lib/courses.functions";
+import { enrollInCourse, getMyEnrollment, unenroll } from "@/lib/enrollments.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { categoryMeta } from "@/lib/courses";
-import { Star, Clock, Users, PlayCircle, CheckCircle2, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import { Star, Clock, Users, PlayCircle, CheckCircle2, ArrowLeft, Eye } from "lucide-react";
 
 export const Route = createFileRoute("/course/$slug")({
   head: ({ params }) => ({
@@ -35,18 +39,70 @@ function CoursePage() {
 
 function Detail() {
   const { slug } = Route.useParams();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const fetchCourse = useServerFn(getCourseBySlug);
+  const fetchEnrollment = useServerFn(getMyEnrollment);
+  const enrollFn = useServerFn(enrollInCourse);
+  const unenrollFn = useServerFn(unenroll);
+  const recordView = useServerFn(recordCourseView);
+
   const { data: course } = useSuspenseQuery({
     queryKey: ["course", slug],
     queryFn: () => fetchCourse({ data: { slug } }),
   });
   if (!course) throw notFound();
 
+  // fire-and-forget view increment
+  useEffect(() => {
+    recordView({ data: { courseId: course.id } }).catch(() => {});
+  }, [course.id, recordView]);
+
+  // Only fetch enrollment when signed in
+  const { data: enrollment } = useQuery({
+    queryKey: ["enrollment", course.id],
+    queryFn: async () => {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session) return null;
+      return fetchEnrollment({ data: { courseId: course.id } });
+    },
+  });
+
+  const enrollMut = useMutation({
+    mutationFn: async () => {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session) {
+        router.navigate({ to: "/auth", search: { mode: "signin" } });
+        throw new Error("Sign in required");
+      }
+      return enrollFn({ data: { courseId: course.id } });
+    },
+    onSuccess: () => {
+      toast.success("Enrolled — happy learning!");
+      queryClient.invalidateQueries({ queryKey: ["enrollment", course.id] });
+      queryClient.invalidateQueries({ queryKey: ["my-enrollments"] });
+    },
+    onError: (e) => {
+      if ((e as Error).message !== "Sign in required") toast.error((e as Error).message);
+    },
+  });
+
+  const unenrollMut = useMutation({
+    mutationFn: () => unenrollFn({ data: { courseId: course.id } }),
+    onSuccess: () => {
+      toast.success("Unenrolled");
+      queryClient.invalidateQueries({ queryKey: ["enrollment", course.id] });
+      queryClient.invalidateQueries({ queryKey: ["my-enrollments"] });
+    },
+  });
+
   const meta = categoryMeta(course.category);
   const mockLessons = Array.from({ length: 8 }).map((_, i) => ({
     title: `Lesson ${i + 1}: ${["Overview", "Core strategy", "Practice set", "Common traps", "Timing drill", "Advanced tips", "Mock section", "Review & next steps"][i]}`,
     duration: [8, 14, 22, 12, 18, 20, 30, 10][i],
   }));
+
+  const isEnrolled = !!enrollment;
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
@@ -117,14 +173,52 @@ function Detail() {
           <div className="rounded-3xl border border-border bg-card p-6 shadow-lg">
             <div className="font-display text-3xl font-extrabold">Free</div>
             <div className="text-sm text-muted-foreground">Full access with your account</div>
-            <Button className="mt-5 w-full rounded-full" size="lg">Enroll now</Button>
-            <Button className="mt-2 w-full rounded-full" size="lg" variant="outline">Add to wishlist</Button>
+
+            {isEnrolled ? (
+              <>
+                <div className="mt-4">
+                  <div className="mb-1 flex justify-between text-xs">
+                    <span className="font-semibold">Your progress</span>
+                    <span className="text-muted-foreground">{enrollment.progress}%</span>
+                  </div>
+                  <Progress value={enrollment.progress} className="h-2" />
+                </div>
+                <Link to="/my-courses">
+                  <Button className="mt-5 w-full rounded-full" size="lg">
+                    {enrollment.status === "completed" ? "Review course" : "Continue learning"}
+                  </Button>
+                </Link>
+                <Button
+                  className="mt-2 w-full rounded-full"
+                  size="lg"
+                  variant="outline"
+                  disabled={unenrollMut.isPending}
+                  onClick={() => unenrollMut.mutate()}
+                >
+                  {unenrollMut.isPending ? "Removing…" : "Unenroll"}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  className="mt-5 w-full rounded-full"
+                  size="lg"
+                  disabled={enrollMut.isPending}
+                  onClick={() => enrollMut.mutate()}
+                >
+                  {enrollMut.isPending ? "Enrolling…" : "Enroll now"}
+                </Button>
+                <Button className="mt-2 w-full rounded-full" size="lg" variant="outline">Add to wishlist</Button>
+              </>
+            )}
+
             <div className="mt-6 space-y-3 text-sm">
               <Row k="Level" v={course.level} />
               <Row k="Duration" v={`${course.duration_hours} hours`} />
               <Row k="Lessons" v={`${mockLessons.length}`} />
               <Row k="Language" v="English" />
               <Row k="Certificate" v="Yes" />
+              <Row k="Views" v={`${course.student_count.toLocaleString()}+ learners`} icon={<Eye className="h-3.5 w-3.5" />} />
             </div>
           </div>
           <div className="mt-4 rounded-3xl border border-border bg-card p-6">
@@ -145,10 +239,10 @@ function Detail() {
   );
 }
 
-function Row({ k, v }: { k: string; v: string }) {
+function Row({ k, v, icon }: { k: string; v: string; icon?: React.ReactNode }) {
   return (
     <div className="flex justify-between border-b border-dashed border-border pb-2 last:border-0">
-      <span className="text-muted-foreground">{k}</span>
+      <span className="flex items-center gap-1.5 text-muted-foreground">{icon}{k}</span>
       <span className="font-semibold capitalize">{v}</span>
     </div>
   );

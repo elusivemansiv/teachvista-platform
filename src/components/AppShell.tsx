@@ -21,8 +21,8 @@ import { useQueryClient } from "@tanstack/react-query";
 
 const learnerItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { title: "My courses", url: "/my-courses", icon: PlayCircle },
   { title: "Browse courses", url: "/browse", icon: Compass },
-  { title: "My learning", url: "/dashboard", icon: PlayCircle },
 ];
 
 const teacherItems = [

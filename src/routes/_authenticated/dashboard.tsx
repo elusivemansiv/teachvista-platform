@@ -3,12 +3,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Suspense } from "react";
 import { listCourses } from "@/lib/courses.functions";
+import { listMyEnrollments } from "@/lib/enrollments.functions";
 import { AppShell } from "@/components/AppShell";
 import { CourseCard } from "@/components/CourseCard";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CATEGORIES } from "@/lib/courses";
-import { Target, Flame, Trophy, Calendar } from "lucide-react";
+import { CATEGORIES, categoryMeta } from "@/lib/courses";
+import { Target, Flame, Trophy, Calendar, PlayCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   beforeLoad: ({ context }) => {
@@ -31,15 +32,25 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   ),
 });
 
-
 function Dashboard() {
   const fetchCourses = useServerFn(listCourses);
+  const fetchEnrollments = useServerFn(listMyEnrollments);
   const { data: courses } = useSuspenseQuery({
     queryKey: ["courses", "public"],
     queryFn: () => fetchCourses(),
   });
-  const continueLearning = courses.slice(0, 3);
-  const recommended = [...courses].sort((a, b) => b.rating - a.rating).slice(0, 6);
+  const { data: enrollments } = useSuspenseQuery({
+    queryKey: ["my-enrollments"],
+    queryFn: () => fetchEnrollments(),
+  });
+
+  const enrolledIds = new Set(enrollments.map((e) => e.course_id));
+  const active = enrollments.filter((e) => e.status !== "completed").slice(0, 3);
+  const completed = enrollments.filter((e) => e.status === "completed").length;
+  const avgProgress = enrollments.length
+    ? Math.round(enrollments.reduce((s, e) => s + e.progress, 0) / enrollments.length)
+    : 0;
+  const recommended = courses.filter((c) => !enrolledIds.has(c.id)).sort((a, b) => b.rating - a.rating).slice(0, 6);
 
   const skills = [
     { name: "Listening", band: 6.5, target: 7.5, color: "from-blue-500 to-indigo-500" },
@@ -54,37 +65,60 @@ function Dashboard() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="font-display text-3xl font-extrabold">Welcome back 👋</h1>
-            <p className="mt-1 text-primary-foreground/90">You're 4 lessons away from a 7-day streak.</p>
+            <p className="mt-1 text-primary-foreground/90">
+              {enrollments.length
+                ? `You're enrolled in ${enrollments.length} course${enrollments.length === 1 ? "" : "s"} · ${avgProgress}% average progress.`
+                : "Pick a course to get started."}
+            </p>
           </div>
           <div className="flex gap-3">
-            <Stat icon={<Flame className="h-4 w-4" />} k="6-day streak" />
-            <Stat icon={<Target className="h-4 w-4" />} k="Target 7.5" />
-            <Stat icon={<Trophy className="h-4 w-4" />} k="12 lessons done" />
+            <Stat icon={<Flame className="h-4 w-4" />} k={`${enrollments.length} enrolled`} />
+            <Stat icon={<Target className="h-4 w-4" />} k={`${avgProgress}% avg`} />
+            <Stat icon={<Trophy className="h-4 w-4" />} k={`${completed} completed`} />
           </div>
         </div>
       </div>
 
       <section>
-        <h2 className="mb-4 font-display text-xl font-bold">Continue learning</h2>
-        <div className="grid gap-5 md:grid-cols-3">
-          {continueLearning.map((c, i) => (
-            <div key={c.id} className="overflow-hidden rounded-3xl border border-border bg-card">
-              <div className="aspect-video bg-secondary">
-                {c.thumbnail_url && <img src={c.thumbnail_url} alt="" className="h-full w-full object-cover" />}
-              </div>
-              <div className="p-5">
-                <h3 className="line-clamp-1 font-semibold">{c.title}</h3>
-                <div className="mt-3">
-                  <Progress value={[42, 68, 15][i]} className="h-2" />
-                  <div className="mt-1 text-xs text-muted-foreground">{[42, 68, 15][i]}% complete</div>
-                </div>
-                <Link to="/course/$slug" params={{ slug: c.slug }}>
-                  <Button className="mt-4 w-full rounded-full" variant="secondary">Resume</Button>
-                </Link>
-              </div>
-            </div>
-          ))}
+        <div className="mb-4 flex items-end justify-between">
+          <h2 className="font-display text-xl font-bold">Continue learning</h2>
+          <Link to="/my-courses" className="text-sm font-semibold text-primary hover:underline">View all →</Link>
         </div>
+        {active.length ? (
+          <div className="grid gap-5 md:grid-cols-3">
+            {active.map((e) => {
+              const meta = categoryMeta(e.course.category);
+              const nextLesson = Math.min(8, Math.floor((e.progress / 100) * 8) + 1);
+              return (
+                <div key={e.id} className="overflow-hidden rounded-3xl border border-border bg-card">
+                  <div className={`aspect-video bg-gradient-to-br ${meta.color}`}>
+                    {e.course.thumbnail_url && <img src={e.course.thumbnail_url} alt="" className="h-full w-full object-cover opacity-90" />}
+                  </div>
+                  <div className="p-5">
+                    <h3 className="line-clamp-1 font-semibold">{e.course.title}</h3>
+                    <div className="mt-3">
+                      <Progress value={e.progress} className="h-2" />
+                      <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+                        <span>{e.progress}% complete</span>
+                        <span>Next: Lesson {nextLesson}</span>
+                      </div>
+                    </div>
+                    <Link to="/my-courses">
+                      <Button className="mt-4 w-full rounded-full" variant="secondary">
+                        <PlayCircle className="mr-1 h-4 w-4" /> Resume
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
+            <p className="text-muted-foreground">You haven't enrolled in any course yet.</p>
+            <Link to="/browse"><Button className="mt-3 rounded-full">Browse courses</Button></Link>
+          </div>
+        )}
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
