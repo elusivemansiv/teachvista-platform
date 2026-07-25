@@ -23,6 +23,7 @@ export type Database = {
           id: string
           is_published: boolean
           is_trending: boolean
+          last_uploaded_at: string
           level: Database["public"]["Enums"]["course_level"]
           popularity: number
           preview_video_url: string | null
@@ -34,6 +35,7 @@ export type Database = {
           teacher_name: string
           thumbnail_url: string | null
           title: string
+          views_count: number
         }
         Insert: {
           category: Database["public"]["Enums"]["course_category"]
@@ -43,6 +45,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           is_trending?: boolean
+          last_uploaded_at?: string
           level?: Database["public"]["Enums"]["course_level"]
           popularity?: number
           preview_video_url?: string | null
@@ -54,6 +57,7 @@ export type Database = {
           teacher_name: string
           thumbnail_url?: string | null
           title: string
+          views_count?: number
         }
         Update: {
           category?: Database["public"]["Enums"]["course_category"]
@@ -63,6 +67,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           is_trending?: boolean
+          last_uploaded_at?: string
           level?: Database["public"]["Enums"]["course_level"]
           popularity?: number
           preview_video_url?: string | null
@@ -74,6 +79,7 @@ export type Database = {
           teacher_name?: string
           thumbnail_url?: string | null
           title?: string
+          views_count?: number
         }
         Relationships: []
       }
@@ -82,21 +88,30 @@ export type Database = {
           course_id: string
           created_at: string
           id: string
+          last_lesson_id: string | null
           progress: number
+          status: Database["public"]["Enums"]["enrollment_status"]
+          updated_at: string
           user_id: string
         }
         Insert: {
           course_id: string
           created_at?: string
           id?: string
+          last_lesson_id?: string | null
           progress?: number
+          status?: Database["public"]["Enums"]["enrollment_status"]
+          updated_at?: string
           user_id: string
         }
         Update: {
           course_id?: string
           created_at?: string
           id?: string
+          last_lesson_id?: string | null
           progress?: number
+          status?: Database["public"]["Enums"]["enrollment_status"]
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
@@ -105,6 +120,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollments_last_lesson_id_fkey"
+            columns: ["last_lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
             referencedColumns: ["id"]
           },
         ]
@@ -201,6 +223,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_course_view: {
+        Args: { _course_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "learner" | "teacher" | "admin"
@@ -213,6 +239,7 @@ export type Database = {
         | "grammar"
         | "mock_test"
       course_level: "beginner" | "intermediate" | "advanced"
+      enrollment_status: "active" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -351,6 +378,7 @@ export const Constants = {
         "mock_test",
       ],
       course_level: ["beginner", "intermediate", "advanced"],
+      enrollment_status: ["active", "completed", "cancelled"],
     },
   },
 } as const
