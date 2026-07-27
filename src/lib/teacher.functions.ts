@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { buildTrends, type TrendPoint } from "./teacher-analytics";
 
 export type TeacherCourseAnalytics = {
   id: string;
@@ -15,7 +16,7 @@ export type TeacherCourseAnalytics = {
   completed_count: number;
 };
 
-export type TrendPoint = { date: string; views: number; enrollments: number; completions: number };
+export type { TrendPoint };
 
 export type TeacherCourseDetail = {
   course: {
@@ -77,43 +78,10 @@ export const getTeacherTrends = createServerFn({ method: "GET" })
   .inputValidator((d: { days?: number; courseId?: string } | undefined) => d ?? {})
   .handler(async ({ data, context }): Promise<TrendPoint[]> => {
     const { supabase, userId } = context;
-    const days = data.days ?? 30;
-    const since = new Date(Date.now() - (days - 1) * 86400000);
-    since.setHours(0, 0, 0, 0);
-
     const { data: courses, error } = await supabase.from("courses").select("id").eq("teacher_id", userId);
     if (error) throw error;
     const ids = (courses ?? []).map((c) => c.id).filter((id) => !data.courseId || id === data.courseId);
-    if (!ids.length) return [];
-
-    const [{ data: views }, { data: enrolls }] = await Promise.all([
-      supabase.from("course_views").select("viewed_at").in("course_id", ids).gte("viewed_at", since.toISOString()),
-      supabase
-        .from("enrollments")
-        .select("created_at, updated_at, status")
-        .in("course_id", ids)
-        .gte("created_at", since.toISOString()),
-    ]);
-
-    const key = (d: string | Date) => new Date(d).toISOString().slice(0, 10);
-    const map = new Map<string, TrendPoint>();
-    for (let i = 0; i < days; i++) {
-      const d = new Date(since.getTime() + i * 86400000);
-      map.set(key(d), { date: key(d), views: 0, enrollments: 0, completions: 0 });
-    }
-    for (const v of views ?? []) {
-      const p = map.get(key(v.viewed_at));
-      if (p) p.views += 1;
-    }
-    for (const e of enrolls ?? []) {
-      const p = map.get(key(e.created_at));
-      if (p) p.enrollments += 1;
-      if (e.status === "completed") {
-        const q = map.get(key(e.updated_at));
-        if (q) q.completions += 1;
-      }
-    }
-    return [...map.values()];
+    return buildTrends(supabase, ids, data.days ?? 30);
   });
 
 export const getTeacherCourseDetail = createServerFn({ method: "GET" })
@@ -141,7 +109,7 @@ export const getTeacherCourseDetail = createServerFn({ method: "GET" })
     const rows = enrolls ?? [];
     const avg = rows.length ? rows.reduce((s, r) => s + (r.progress ?? 0), 0) / rows.length : 0;
 
-    const trends = await getTeacherTrends({ data: { days: 30, courseId: course.id } });
+    const trends = await buildTrends(supabase, [course.id], 30);
 
     return {
       course: {
