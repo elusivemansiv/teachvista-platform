@@ -92,3 +92,41 @@ export const updateProgress = createServerFn({ method: "POST" })
     if (error) throw error;
     return row as EnrollmentRow;
   });
+
+export type EnrollmentDetailed = EnrollmentWithCourse & {
+  totalLessons: number;
+  completedLessons: number;
+  nextLesson: { id: string; title: string; ordering: number } | null;
+};
+
+export const listMyEnrollmentsDetailed = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<EnrollmentDetailed[]> => {
+    const { supabase, userId } = context;
+    const { data, error } = await supabase
+      .from("enrollments")
+      .select(`*, course:courses(${COURSE_COLS})`)
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false });
+    if (error) throw error;
+    const rows = (data ?? []).filter((r: { course: Course | null }) => r.course) as EnrollmentWithCourse[];
+    if (!rows.length) return [];
+
+    const courseIds = rows.map((r) => r.course_id);
+    const [{ data: lessons }, { data: done }] = await Promise.all([
+      supabase.from("lessons").select("id, course_id, title, ordering").in("course_id", courseIds).order("ordering"),
+      supabase.from("lesson_progress").select("lesson_id, course_id").eq("user_id", userId).in("course_id", courseIds),
+    ]);
+
+    return rows.map((r) => {
+      const ls = (lessons ?? []).filter((l) => l.course_id === r.course_id);
+      const completedIds = new Set((done ?? []).filter((d) => d.course_id === r.course_id).map((d) => d.lesson_id));
+      const next = ls.find((l) => !completedIds.has(l.id)) ?? null;
+      return {
+        ...r,
+        totalLessons: ls.length,
+        completedLessons: completedIds.size,
+        nextLesson: next ? { id: next.id, title: next.title, ordering: next.ordering } : null,
+      };
+    });
+  });

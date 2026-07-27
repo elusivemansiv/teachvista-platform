@@ -2,7 +2,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Suspense, useState } from "react";
-import { listMyEnrollments, updateProgress, unenroll, type EnrollmentWithCourse } from "@/lib/enrollments.functions";
+import { listMyEnrollmentsDetailed, unenroll, type EnrollmentDetailed } from "@/lib/enrollments.functions";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -33,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/my-courses")({
 });
 
 function MyCourses() {
-  const fetchEnrollments = useServerFn(listMyEnrollments);
+  const fetchEnrollments = useServerFn(listMyEnrollmentsDetailed);
   const { data } = useSuspenseQuery({
     queryKey: ["my-enrollments"],
     queryFn: () => fetchEnrollments(),
@@ -80,18 +80,11 @@ function MyCourses() {
   );
 }
 
-function EnrollmentCard({ enrollment }: { enrollment: EnrollmentWithCourse }) {
+function EnrollmentCard({ enrollment }: { enrollment: EnrollmentDetailed }) {
   const c = enrollment.course;
   const meta = categoryMeta(c.category);
   const queryClient = useQueryClient();
-  const updateFn = useServerFn(updateProgress);
   const unenrollFn = useServerFn(unenroll);
-
-  const bump = useMutation({
-    mutationFn: (delta: number) =>
-      updateFn({ data: { courseId: c.id, progress: Math.min(100, enrollment.progress + delta) } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["my-enrollments"] }),
-  });
 
   const remove = useMutation({
     mutationFn: () => unenrollFn({ data: { courseId: c.id } }),
@@ -102,7 +95,7 @@ function EnrollmentCard({ enrollment }: { enrollment: EnrollmentWithCourse }) {
   });
 
   const done = enrollment.status === "completed";
-  const nextLesson = Math.min(8, Math.floor((enrollment.progress / 100) * 8) + 1);
+  const next = enrollment.nextLesson;
 
   return (
     <div className="flex flex-col overflow-hidden rounded-3xl border border-border bg-card">
@@ -122,20 +115,24 @@ function EnrollmentCard({ enrollment }: { enrollment: EnrollmentWithCourse }) {
         <div className="mt-3">
           <Progress value={enrollment.progress} className="h-2" />
           <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-            <span>{enrollment.progress}% complete</span>
-            {!done && <span>Next: Lesson {nextLesson}</span>}
+            <span>
+              {enrollment.completedLessons}/{enrollment.totalLessons} lessons · {enrollment.progress}%
+            </span>
+            {!done && next && <span className="line-clamp-1 max-w-[55%] text-right">Next: {next.title}</span>}
           </div>
         </div>
         <div className="mt-4 flex gap-2">
-          <Button
-            className="flex-1 rounded-full"
-            variant={done ? "outline" : "default"}
-            disabled={bump.isPending}
-            onClick={() => bump.mutate(done ? 0 : 20)}
+          <Link
+            to="/learn/$slug"
+            params={{ slug: c.slug }}
+            search={{ lesson: next?.id ?? undefined }}
+            className="flex-1"
           >
-            <PlayCircle className="mr-1 h-4 w-4" />
-            {done ? "Review" : bump.isPending ? "…" : "Resume"}
-          </Button>
+            <Button className="w-full rounded-full" variant={done ? "outline" : "default"}>
+              <PlayCircle className="mr-1 h-4 w-4" />
+              {done ? "Review" : next ? `Resume · Lesson ${next.ordering}` : "Start"}
+            </Button>
+          </Link>
           <Button
             size="icon"
             variant="ghost"

@@ -2,8 +2,8 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Suspense } from "react";
-import { listCourses } from "@/lib/courses.functions";
-import { listMyEnrollments } from "@/lib/enrollments.functions";
+import { listMyEnrollmentsDetailed } from "@/lib/enrollments.functions";
+import { getRecommendations } from "@/lib/recommendations.functions";
 import { AppShell } from "@/components/AppShell";
 import { CourseCard } from "@/components/CourseCard";
 import { Button } from "@/components/ui/button";
@@ -33,24 +33,22 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
-  const fetchCourses = useServerFn(listCourses);
-  const fetchEnrollments = useServerFn(listMyEnrollments);
-  const { data: courses } = useSuspenseQuery({
-    queryKey: ["courses", "public"],
-    queryFn: () => fetchCourses(),
-  });
+  const fetchEnrollments = useServerFn(listMyEnrollmentsDetailed);
+  const fetchRecommendations = useServerFn(getRecommendations);
   const { data: enrollments } = useSuspenseQuery({
     queryKey: ["my-enrollments"],
     queryFn: () => fetchEnrollments(),
   });
+  const { data: recommended } = useSuspenseQuery({
+    queryKey: ["recommendations"],
+    queryFn: () => fetchRecommendations({ data: { limit: 6 } }),
+  });
 
-  const enrolledIds = new Set(enrollments.map((e) => e.course_id));
   const active = enrollments.filter((e) => e.status !== "completed").slice(0, 3);
   const completed = enrollments.filter((e) => e.status === "completed").length;
   const avgProgress = enrollments.length
     ? Math.round(enrollments.reduce((s, e) => s + e.progress, 0) / enrollments.length)
     : 0;
-  const recommended = courses.filter((c) => !enrolledIds.has(c.id)).sort((a, b) => b.rating - a.rating).slice(0, 6);
 
   const skills = [
     { name: "Listening", band: 6.5, target: 7.5, color: "from-blue-500 to-indigo-500" },
@@ -88,7 +86,7 @@ function Dashboard() {
           <div className="grid gap-5 md:grid-cols-3">
             {active.map((e) => {
               const meta = categoryMeta(e.course.category);
-              const nextLesson = Math.min(8, Math.floor((e.progress / 100) * 8) + 1);
+              const next = e.nextLesson;
               return (
                 <div key={e.id} className="overflow-hidden rounded-3xl border border-border bg-card">
                   <div className={`aspect-video bg-gradient-to-br ${meta.color}`}>
@@ -99,13 +97,13 @@ function Dashboard() {
                     <div className="mt-3">
                       <Progress value={e.progress} className="h-2" />
                       <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-                        <span>{e.progress}% complete</span>
-                        <span>Next: Lesson {nextLesson}</span>
+                        <span>{e.completedLessons}/{e.totalLessons} lessons</span>
+                        <span className="line-clamp-1 max-w-[55%] text-right">{next ? `Next: ${next.title}` : "All done"}</span>
                       </div>
                     </div>
-                    <Link to="/my-courses">
+                    <Link to="/learn/$slug" params={{ slug: e.course.slug }} search={{ lesson: next?.id ?? undefined }}>
                       <Button className="mt-4 w-full rounded-full" variant="secondary">
-                        <PlayCircle className="mr-1 h-4 w-4" /> Resume
+                        <PlayCircle className="mr-1 h-4 w-4" /> {next ? `Resume · Lesson ${next.ordering}` : "Review"}
                       </Button>
                     </Link>
                   </div>
@@ -163,7 +161,10 @@ function Dashboard() {
 
       <section>
         <div className="mb-4 flex items-end justify-between">
-          <h2 className="font-display text-xl font-bold">Recommended for your target band</h2>
+          <div>
+            <h2 className="font-display text-xl font-bold">Picked for you</h2>
+            <p className="text-sm text-muted-foreground">Based on the courses you're taking and recently viewed.</p>
+          </div>
           <div className="hidden gap-2 md:flex">
             {CATEGORIES.slice(0, 5).map((c) => (
               <Link
@@ -178,8 +179,13 @@ function Dashboard() {
           </div>
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {recommended.map((c) => (
-            <CourseCard key={c.id} course={c} />
+          {recommended.map((r) => (
+            <div key={r.course.id} className="flex flex-col gap-2">
+              <CourseCard course={r.course} />
+              <span className="self-start rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent-foreground">
+                {r.reason}
+              </span>
+            </div>
           ))}
         </div>
       </section>
