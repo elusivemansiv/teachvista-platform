@@ -2,7 +2,8 @@ import { createFileRoute, Link, notFound, useRouter } from "@tanstack/react-rout
 import { useServerFn } from "@tanstack/react-start";
 import { useSuspenseQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Suspense, useEffect } from "react";
-import { getCourseBySlug, recordCourseView } from "@/lib/courses.functions";
+import { getCourseBySlug, recordCourseView, recordMyCourseView } from "@/lib/courses.functions";
+import { listCourseLessons } from "@/lib/lessons.functions";
 import { enrollInCourse, getMyEnrollment, unenroll } from "@/lib/enrollments.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -46,6 +47,8 @@ function Detail() {
   const enrollFn = useServerFn(enrollInCourse);
   const unenrollFn = useServerFn(unenroll);
   const recordView = useServerFn(recordCourseView);
+  const recordMyView = useServerFn(recordMyCourseView);
+  const fetchLessons = useServerFn(listCourseLessons);
 
   const { data: course } = useSuspenseQuery({
     queryKey: ["course", slug],
@@ -53,10 +56,26 @@ function Detail() {
   });
   if (!course) throw notFound();
 
-  // fire-and-forget view increment
+  // fire-and-forget view increment (attributed to the user when signed in)
   useEffect(() => {
-    recordView({ data: { courseId: course.id } }).catch(() => {});
-  }, [course.id, recordView]);
+    let cancelled = false;
+    (async () => {
+      const { data: sess } = await supabase.auth.getSession();
+      if (cancelled) return;
+      const fn = sess.session
+        ? recordMyView({ data: { courseId: course.id } })
+        : recordView({ data: { courseId: course.id } });
+      fn.catch(() => {});
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [course.id, recordView, recordMyView]);
+
+  const { data: lessons = [] } = useQuery({
+    queryKey: ["lessons", course.id],
+    queryFn: () => fetchLessons({ data: { courseId: course.id } }),
+  });
 
   // Only fetch enrollment when signed in
   const { data: enrollment } = useQuery({
@@ -97,11 +116,6 @@ function Detail() {
   });
 
   const meta = categoryMeta(course.category);
-  const mockLessons = Array.from({ length: 8 }).map((_, i) => ({
-    title: `Lesson ${i + 1}: ${["Overview", "Core strategy", "Practice set", "Common traps", "Timing drill", "Advanced tips", "Mock section", "Review & next steps"][i]}`,
-    duration: [8, 14, 22, 12, 18, 20, 30, 10][i],
-  }));
-
   const isEnrolled = !!enrollment;
 
   return (
@@ -156,15 +170,18 @@ function Detail() {
           <section className="mt-10">
             <h2 className="font-display text-2xl font-bold">Lessons</h2>
             <ol className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
-              {mockLessons.map((l, i) => (
-                <li key={i} className="flex items-center gap-4 p-4">
+              {lessons.map((l) => (
+                <li key={l.id} className="flex items-center gap-4 p-4">
                   <div className="grid h-9 w-9 place-items-center rounded-full bg-primary-soft text-primary">
                     <PlayCircle className="h-5 w-5" />
                   </div>
                   <div className="flex-1 text-sm font-medium">{l.title}</div>
-                  <div className="text-xs text-muted-foreground">{l.duration} min</div>
+                  <div className="text-xs text-muted-foreground">{l.duration_min} min</div>
                 </li>
               ))}
+              {lessons.length === 0 && (
+                <li className="p-4 text-sm text-muted-foreground">Lessons are being prepared.</li>
+              )}
             </ol>
           </section>
         </div>
@@ -183,7 +200,7 @@ function Detail() {
                   </div>
                   <Progress value={enrollment.progress} className="h-2" />
                 </div>
-                <Link to="/my-courses">
+                <Link to="/learn/$slug" params={{ slug: course.slug }} search={{ lesson: undefined }}>
                   <Button className="mt-5 w-full rounded-full" size="lg">
                     {enrollment.status === "completed" ? "Review course" : "Continue learning"}
                   </Button>
@@ -215,7 +232,7 @@ function Detail() {
             <div className="mt-6 space-y-3 text-sm">
               <Row k="Level" v={course.level} />
               <Row k="Duration" v={`${course.duration_hours} hours`} />
-              <Row k="Lessons" v={`${mockLessons.length}`} />
+              <Row k="Lessons" v={`${lessons.length}`} />
               <Row k="Language" v="English" />
               <Row k="Certificate" v="Yes" />
               <Row k="Views" v={`${course.student_count.toLocaleString()}+ learners`} icon={<Eye className="h-3.5 w-3.5" />} />
