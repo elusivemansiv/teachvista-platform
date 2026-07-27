@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      course_views: {
+        Row: {
+          course_id: string
+          id: string
+          user_id: string | null
+          viewed_at: string
+        }
+        Insert: {
+          course_id: string
+          id?: string
+          user_id?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          course_id?: string
+          id?: string
+          user_id?: string | null
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_views_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courses: {
         Row: {
           category: Database["public"]["Enums"]["course_category"]
@@ -125,6 +154,45 @@ export type Database = {
           {
             foreignKeyName: "enrollments_last_lesson_id_fkey"
             columns: ["last_lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_progress: {
+        Row: {
+          completed_at: string
+          course_id: string
+          id: string
+          lesson_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          course_id: string
+          id?: string
+          lesson_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          course_id?: string
+          id?: string
+          lesson_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_progress_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
             isOneToOne: false
             referencedRelation: "lessons"
             referencedColumns: ["id"]
