@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Course } from "./courses";
 
 function serverSupabase() {
@@ -48,7 +49,18 @@ export const getCourseBySlug = createServerFn({ method: "GET" })
 export const recordCourseView = createServerFn({ method: "POST" })
   .inputValidator((d: { courseId: string }) => d)
   .handler(async ({ data }) => {
-    const { error } = await serverSupabase().rpc("increment_course_view", { _course_id: data.courseId });
+    const sb = serverSupabase();
+    await sb.from("course_views").insert({ course_id: data.courseId, user_id: null });
+    const { error } = await sb.rpc("increment_course_view", { _course_id: data.courseId });
     if (error) throw error;
+    return { ok: true };
+  });
+
+export const recordMyCourseView = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { courseId: string }) => d)
+  .handler(async ({ data, context }) => {
+    await context.supabase.from("course_views").insert({ course_id: data.courseId, user_id: context.userId });
+    await context.supabase.rpc("increment_course_view", { _course_id: data.courseId });
     return { ok: true };
   });
