@@ -10,9 +10,11 @@ export const Route = createFileRoute("/_authenticated")({
       .from("user_roles")
       .select("role")
       .eq("user_id", data.user.id);
-    const role: "teacher" | "learner" = roles?.some((r) => r.role === "teacher")
-      ? "teacher"
-      : "learner";
+    const role: "teacher" | "learner" | "admin" = roles?.some((r) => r.role === "admin")
+      ? "admin"
+      : roles?.some((r) => r.role === "teacher")
+        ? "teacher"
+        : "learner";
     return { user: data.user, role };
   },
   component: () => <Outlet />,
