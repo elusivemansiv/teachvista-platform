@@ -160,7 +160,291 @@ function CourseDetail() {
           ))}
         </ol>
       </section>
+
+      <LessonManager courseId={course.id} />
+      <CohortSection courseId={course.id} />
     </div>
+  );
+}
+
+function LessonManager({ courseId }: { courseId: string }) {
+  const queryClient = useQueryClient();
+  const fetchLessons = useServerFn(listTeacherLessons);
+  const saveDraft = useServerFn(saveLessonDraft);
+  const discardDraft = useServerFn(discardLessonDraft);
+  const publishDraft = useServerFn(publishLessonDraft);
+  const unpublish = useServerFn(unpublishLesson);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [form, setForm] = useState<{ title: string; durationMin: number; videoUrl: string }>({
+    title: "",
+    durationMin: 10,
+    videoUrl: "",
+  });
+  const [schedule, setSchedule] = useState<Record<string, string>>({});
+
+  const { data: lessons = [], isLoading } = useQuery({
+    queryKey: ["teacher-lessons", courseId],
+    queryFn: () => fetchLessons({ data: { courseId } }),
+  });
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["teacher-lessons", courseId] });
+    queryClient.invalidateQueries({ queryKey: ["teacher-course", courseId] });
+  };
+
+  const saveMut = useMutation({
+    mutationFn: (v: { lessonId: string }) =>
+      saveDraft({ data: { lessonId: v.lessonId, courseId, title: form.title, durationMin: form.durationMin, videoUrl: form.videoUrl || null } }),
+    onSuccess: () => {
+      toast.success("Draft saved — learners still see the published version");
+      setEditing(null);
+      refresh();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const publishMut = useMutation({
+    mutationFn: (v: { lessonId: string; publishAt?: string | null }) =>
+      publishDraft({ data: { lessonId: v.lessonId, courseId, publishAt: v.publishAt ?? null } }),
+    onSuccess: (r) => {
+      toast.success(r.scheduled ? "Scheduled for publishing" : "Published to learners");
+      refresh();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const discardMut = useMutation({
+    mutationFn: (lessonId: string) => discardDraft({ data: { lessonId, courseId } }),
+    onSuccess: () => {
+      toast.success("Draft discarded");
+      refresh();
+    },
+  });
+
+  const unpublishMut = useMutation({
+    mutationFn: (lessonId: string) => unpublish({ data: { lessonId, courseId } }),
+    onSuccess: () => {
+      toast.success("Lesson hidden from learners");
+      refresh();
+    },
+  });
+
+  return (
+    <section className="rounded-3xl border border-border bg-card p-6">
+      <h2 className="font-display text-xl font-bold">Drafts &amp; publishing</h2>
+      <p className="text-sm text-muted-foreground">
+        Edit a lesson without changing what learners currently see. Publish immediately, or schedule it for later.
+      </p>
+      {isLoading && <p className="mt-4 text-sm text-muted-foreground">Loading lessons…</p>}
+      <ul className="mt-4 space-y-3">
+        {lessons.map((l) => (
+          <li key={l.id} className="rounded-2xl border border-border p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-primary-soft text-sm font-bold text-primary">
+                {l.ordering}
+              </span>
+              <span className="flex-1 text-sm font-semibold">{l.title}</span>
+              <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-semibold capitalize">{l.status}</span>
+              {l.has_draft && (
+                <span className="rounded-full bg-accent px-2.5 py-0.5 text-xs font-semibold text-accent-foreground">
+                  Unpublished draft
+                </span>
+              )}
+              {l.publish_at && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+                  {new Date(l.publish_at).toLocaleString()}
+                </span>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="rounded-full"
+                aria-expanded={editing === l.id}
+                onClick={() => {
+                  setEditing(editing === l.id ? null : l.id);
+                  setForm({
+                    title: l.draft_title ?? l.title,
+                    durationMin: l.draft_duration_min ?? l.duration_min,
+                    videoUrl: l.draft_video_url ?? l.video_url ?? "",
+                  });
+                }}
+              >
+                {editing === l.id ? "Close" : "Edit draft"}
+              </Button>
+            </div>
+
+            {editing === l.id && (
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="sm:col-span-2">
+                  <label htmlFor={`t-${l.id}`} className="text-xs font-semibold text-muted-foreground">Lesson title</label>
+                  <Input id={`t-${l.id}`} value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+                </div>
+                <div>
+                  <label htmlFor={`d-${l.id}`} className="text-xs font-semibold text-muted-foreground">Duration (min)</label>
+                  <Input
+                    id={`d-${l.id}`}
+                    type="number"
+                    min={1}
+                    value={form.durationMin}
+                    onChange={(e) => setForm((f) => ({ ...f, durationMin: Number(e.target.value) }))}
+                  />
+                </div>
+                <div className="sm:col-span-3">
+                  <label htmlFor={`v-${l.id}`} className="text-xs font-semibold text-muted-foreground">Video URL</label>
+                  <Input id={`v-${l.id}`} value={form.videoUrl} onChange={(e) => setForm((f) => ({ ...f, videoUrl: e.target.value }))} />
+                </div>
+                <div className="sm:col-span-3 flex flex-wrap items-end gap-3">
+                  <Button className="rounded-full" disabled={saveMut.isPending} onClick={() => saveMut.mutate({ lessonId: l.id })}>
+                    Save draft
+                  </Button>
+                  <div>
+                    <label htmlFor={`s-${l.id}`} className="text-xs font-semibold text-muted-foreground">Publish at (optional)</label>
+                    <Input
+                      id={`s-${l.id}`}
+                      type="datetime-local"
+                      value={schedule[l.id] ?? ""}
+                      onChange={(e) => setSchedule((s) => ({ ...s, [l.id]: e.target.value }))}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="rounded-full"
+                    disabled={publishMut.isPending}
+                    onClick={() =>
+                      publishMut.mutate({
+                        lessonId: l.id,
+                        publishAt: schedule[l.id] ? new Date(schedule[l.id]).toISOString() : null,
+                      })
+                    }
+                  >
+                    {schedule[l.id] ? "Schedule" : "Publish now"}
+                  </Button>
+                  {l.has_draft && (
+                    <Button variant="ghost" className="rounded-full" onClick={() => discardMut.mutate(l.id)}>
+                      Discard draft
+                    </Button>
+                  )}
+                  {l.status === "published" && (
+                    <Button variant="ghost" className="rounded-full text-destructive" onClick={() => unpublishMut.mutate(l.id)}>
+                      Unpublish
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </li>
+        ))}
+        {!isLoading && lessons.length === 0 && <li className="text-sm text-muted-foreground">No lessons yet.</li>}
+      </ul>
+    </section>
+  );
+}
+
+function CohortSection({ courseId }: { courseId: string }) {
+  const fetchCohorts = useServerFn(getCourseCohortAnalytics);
+  const { data } = useQuery({
+    queryKey: ["cohorts", courseId],
+    queryFn: () => fetchCohorts({ data: { courseId } }),
+  });
+  if (!data) return null;
+  const { lessons, cohorts } = data;
+
+  return (
+    <section className="rounded-3xl border border-border bg-card p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-display text-xl font-bold">Cohort engagement</h2>
+          <p className="text-sm text-muted-foreground">
+            Weekly drop-off and average watch time per lesson, grouped by the week learners enrolled.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          className="rounded-full"
+          onClick={() =>
+            downloadCsv(
+              "cohort-engagement.csv",
+              ["Lesson", "Reached", "Completed", "Drop-off %", "Avg watch (min)"],
+              lessons.map((l) => [l.title, l.reached, l.completed, l.dropOffPct, l.avgWatchMin]),
+            )
+          }
+        >
+          <Download className="mr-1.5 h-4 w-4" aria-hidden="true" /> Export cohorts
+        </Button>
+      </div>
+
+      <div className="mt-5 h-64 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={lessons.map((l) => ({ name: `L${l.ordering}`, dropOff: l.dropOffPct, watch: l.avgWatchMin }))}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <XAxis dataKey="name" fontSize={11} />
+            <YAxis fontSize={11} />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="dropOff" name="Drop-off %" fill="#fb923c" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="watch" name="Avg watch (min)" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="mt-6 overflow-x-auto">
+        <table className="w-full text-sm">
+          <caption className="sr-only">Per-lesson engagement</caption>
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
+              <th scope="col" className="py-2">Lesson</th>
+              <th scope="col" className="py-2">Reached</th>
+              <th scope="col" className="py-2">Completed</th>
+              <th scope="col" className="py-2">Drop-off</th>
+              <th scope="col" className="py-2">Avg watch</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lessons.map((l) => (
+              <tr key={l.lessonId} className="border-b border-border/60">
+                <th scope="row" className="py-2 text-left font-medium">{l.ordering}. {l.title}</th>
+                <td className="py-2">{l.reached}</td>
+                <td className="py-2">{l.completed}</td>
+                <td className="py-2">{l.dropOffPct}%</td>
+                <td className="py-2">{l.avgWatchMin} min</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-6 overflow-x-auto">
+        <table className="w-full text-sm">
+          <caption className="sr-only">Weekly cohorts</caption>
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase text-muted-foreground">
+              <th scope="col" className="py-2">Cohort week</th>
+              <th scope="col" className="py-2">Learners</th>
+              <th scope="col" className="py-2">Avg lessons done</th>
+              <th scope="col" className="py-2">Avg watch</th>
+              <th scope="col" className="py-2">Still active</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cohorts.map((c) => (
+              <tr key={c.week} className="border-b border-border/60">
+                <th scope="row" className="py-2 text-left font-medium">Week of {c.week}</th>
+                <td className="py-2">{c.learners}</td>
+                <td className="py-2">{c.avgLessonsCompleted}</td>
+                <td className="py-2">{c.avgWatchMin} min</td>
+                <td className="py-2">{c.retentionPct}%</td>
+              </tr>
+            ))}
+            {cohorts.length === 0 && (
+              <tr>
+                <td colSpan={5} className="py-4 text-muted-foreground">No enrollments yet.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }
 
@@ -173,3 +457,4 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
     </div>
   );
 }
+
