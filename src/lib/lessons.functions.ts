@@ -207,7 +207,7 @@ export const publishLessonDraft = createServerFn({ method: "POST" })
     if (!row) throw new Error("Lesson not found");
     const l = row as TeacherLesson;
 
-    const patch: Record<string, unknown> = {
+    const patch = {
       title: l.has_draft && l.draft_title ? l.draft_title : l.title,
       duration_min: l.has_draft && l.draft_duration_min ? l.draft_duration_min : l.duration_min,
       video_url: l.has_draft ? l.draft_video_url : l.video_url,
@@ -215,14 +215,13 @@ export const publishLessonDraft = createServerFn({ method: "POST" })
       draft_title: null,
       draft_duration_min: null,
       draft_video_url: null,
+      status: "published" as LessonStatus,
+      publish_at: null as string | null,
     };
 
     if (data.publishAt && new Date(data.publishAt).getTime() > Date.now()) {
       patch.status = "scheduled";
       patch.publish_at = data.publishAt;
-    } else {
-      patch.status = "published";
-      patch.publish_at = null;
     }
 
     const { error } = await context.supabase.from("lessons").update(patch).eq("id", data.lessonId);
