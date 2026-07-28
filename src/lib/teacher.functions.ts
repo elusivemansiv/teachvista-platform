@@ -132,3 +132,111 @@ export const getTeacherCourseDetail = createServerFn({ method: "GET" })
       trends,
     };
   });
+
+/* ---------- Cohort engagement analytics ---------- */
+
+export type LessonEngagement = {
+  lessonId: string;
+  title: string;
+  ordering: number;
+  durationMin: number;
+  reached: number;
+  completed: number;
+  dropOffPct: number;
+  avgWatchMin: number;
+};
+
+export type WeeklyCohort = {
+  week: string;
+  learners: number;
+  avgLessonsCompleted: number;
+  avgWatchMin: number;
+  retentionPct: number;
+};
+
+export type CohortAnalytics = { lessons: LessonEngagement[]; cohorts: WeeklyCohort[] };
+
+function weekKey(d: string | Date) {
+  const dt = new Date(d);
+  const day = (dt.getUTCDay() + 6) % 7;
+  dt.setUTCDate(dt.getUTCDate() - day);
+  return dt.toISOString().slice(0, 10);
+}
+
+export const getCourseCohortAnalytics = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { courseId: string }) => d)
+  .handler(async ({ data, context }): Promise<CohortAnalytics> => {
+    const { supabase, userId } = context;
+    const { data: course } = await supabase
+      .from("courses")
+      .select("id")
+      .eq("id", data.courseId)
+      .eq("teacher_id", userId)
+      .maybeSingle();
+    if (!course) return { lessons: [], cohorts: [] };
+
+    const [{ data: lessons }, { data: progress }, { data: watch }, { data: enrolls }] = await Promise.all([
+      supabase.from("lessons").select("id, title, ordering, duration_min").eq("course_id", data.courseId).order("ordering"),
+      supabase.from("lesson_progress").select("lesson_id, user_id, completed_at").eq("course_id", data.courseId),
+      supabase.from("lesson_watch_events").select("lesson_id, user_id, watched_seconds, occurred_at").eq("course_id", data.courseId),
+      supabase.from("enrollments").select("user_id, created_at, updated_at, progress, status").eq("course_id", data.courseId),
+    ]);
+
+    const lessonRows = (lessons ?? []) as { id: string; title: string; ordering: number; duration_min: number }[];
+    const progressRows = (progress ?? []) as { lesson_id: string; user_id: string }[];
+    const watchRows = (watch ?? []) as { lesson_id: string; user_id: string; watched_seconds: number; occurred_at: string }[];
+    const enrollRows = (enrolls ?? []) as { user_id: string; created_at: string; updated_at: string; progress: number; status: string }[];
+
+    // per-lesson funnel
+    const totalLearners = enrollRows.length;
+    let prevReached = totalLearners;
+    const lessonStats: LessonEngagement[] = lessonRows.map((l) => {
+      const completedUsers = new Set(progressRows.filter((p) => p.lesson_id === l.id).map((p) => p.user_id));
+      const watchers = watchRows.filter((w) => w.lesson_id === l.id);
+      const reachedUsers = new Set([...completedUsers, ...watchers.map((w) => w.user_id)]);
+      const reached = reachedUsers.size;
+      const secs = watchers.reduce((s, w) => s + (w.watched_seconds ?? 0), 0);
+      const uniqueWatchers = new Set(watchers.map((w) => w.user_id)).size || 1;
+      const dropOff = prevReached > 0 ? Math.max(0, Math.round(((prevReached - reached) / prevReached) * 100)) : 0;
+      prevReached = reached || prevReached;
+      return {
+        lessonId: l.id,
+        title: l.title,
+        ordering: l.ordering,
+        durationMin: l.duration_min,
+        reached,
+        completed: completedUsers.size,
+        dropOffPct: dropOff,
+        avgWatchMin: Math.round((secs / uniqueWatchers / 60) * 10) / 10,
+      };
+    });
+
+    // weekly cohorts by enrollment week
+    const byWeek = new Map<string, { users: string[] }>();
+    for (const e of enrollRows) {
+      const k = weekKey(e.created_at);
+      if (!byWeek.has(k)) byWeek.set(k, { users: [] });
+      byWeek.get(k)!.users.push(e.user_id);
+    }
+    const twoWeeksAgo = Date.now() - 14 * 86400000;
+    const cohorts: WeeklyCohort[] = [...byWeek.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([week, { users }]) => {
+        const set = new Set(users);
+        const lessonsDone = progressRows.filter((p) => set.has(p.user_id)).length;
+        const secs = watchRows.filter((w) => set.has(w.user_id)).reduce((s, w) => s + (w.watched_seconds ?? 0), 0);
+        const active = enrollRows.filter(
+          (e) => set.has(e.user_id) && new Date(e.updated_at).getTime() >= twoWeeksAgo,
+        ).length;
+        return {
+          week,
+          learners: users.length,
+          avgLessonsCompleted: Math.round((lessonsDone / users.length) * 10) / 10,
+          avgWatchMin: Math.round((secs / users.length / 60) * 10) / 10,
+          retentionPct: Math.round((active / users.length) * 100),
+        };
+      });
+
+    return { lessons: lessonStats, cohorts };
+  });
