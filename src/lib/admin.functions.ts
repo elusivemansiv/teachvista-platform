@@ -30,8 +30,6 @@ export type QueueCourse = {
   lessons: QueueLesson[];
 };
 
-type Ctx = { supabase: { rpc: (n: string, a: Record<string, unknown>) => Promise<{ data: unknown }> } };
-
 async function assertAdmin(context: { supabase: any; userId: string }) {
   const { data } = await context.supabase.rpc("has_role", { _user_id: context.userId, _role: "admin" });
   if (!data) throw new Error("Admins only");
