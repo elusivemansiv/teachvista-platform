@@ -241,5 +241,3 @@ function SelectFilter({
     </div>
   );
 }
-
-}
