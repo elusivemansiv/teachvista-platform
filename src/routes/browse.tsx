@@ -12,7 +12,27 @@ import { CATEGORIES } from "@/lib/courses";
 const searchSchema = z.object({
   category: z.string().optional(),
   q: z.string().optional(),
+  level: z.string().optional(),
+  duration: z.string().optional(),
+  band: z.string().optional(),
+  sort: z.string().optional(),
 });
+
+type BrowseSearch = z.infer<typeof searchSchema>;
+
+const LEVELS = ["beginner", "intermediate", "advanced"] as const;
+const DURATIONS = [
+  { value: "short", label: "Under 4 h", test: (h: number) => h < 4 },
+  { value: "medium", label: "4–8 h", test: (h: number) => h >= 4 && h <= 8 },
+  { value: "long", label: "8 h+", test: (h: number) => h > 8 },
+] as const;
+const SORTS = [
+  { value: "popular", label: "Most popular" },
+  { value: "rating", label: "Top rated" },
+  { value: "newest", label: "Newest" },
+  { value: "shortest", label: "Shortest" },
+] as const;
+
 
 export const Route = createFileRoute("/browse")({
   validateSearch: searchSchema,
