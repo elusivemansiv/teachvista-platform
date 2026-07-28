@@ -1,15 +1,24 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { Suspense } from "react";
+import { useSuspenseQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Suspense, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { getTeacherCourseDetail } from "@/lib/teacher.functions";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { getTeacherCourseDetail, getCourseCohortAnalytics } from "@/lib/teacher.functions";
+import {
+  listTeacherLessons,
+  saveLessonDraft,
+  discardLessonDraft,
+  publishLessonDraft,
+  unpublishLesson,
+} from "@/lib/lessons.functions";
 import { categoryLabel } from "@/lib/courses";
 import { downloadCsv, downloadPdfReport } from "@/lib/report-export";
-import { ArrowLeft, Download, Eye, Users, CheckCircle2, FileText } from "lucide-react";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { ArrowLeft, Download, Eye, Users, CheckCircle2, FileText, CalendarClock } from "lucide-react";
+import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, Legend, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 
 export const Route = createFileRoute("/_authenticated/teacher/course/$courseId")({
   beforeLoad: ({ context }) => {
