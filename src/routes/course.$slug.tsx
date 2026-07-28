@@ -120,8 +120,8 @@ function Detail() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <Link to="/browse" className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" /> Back to browse
+      <Link to="/browse" className="mb-6 inline-flex items-center gap-1 rounded-md text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back to browse
       </Link>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
@@ -138,9 +138,9 @@ function Detail() {
           <h1 className="mt-3 font-display text-4xl font-extrabold leading-tight">{course.title}</h1>
           <p className="mt-3 text-lg text-muted-foreground">{course.description}</p>
           <div className="mt-4 flex flex-wrap items-center gap-5 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1"><Star className="h-4 w-4 fill-accent text-accent" /> {course.rating}</span>
-            <span className="flex items-center gap-1"><Users className="h-4 w-4" /> {course.student_count.toLocaleString()} students</span>
-            <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {course.duration_hours} hours</span>
+            <span className="flex items-center gap-1"><span className="sr-only">Rating</span><Star className="h-4 w-4 fill-accent text-accent" aria-hidden="true" /> {course.rating}</span>
+            <span className="flex items-center gap-1"><Users className="h-4 w-4" aria-hidden="true" /> {course.student_count.toLocaleString()} students</span>
+            <span className="flex items-center gap-1"><Clock className="h-4 w-4" aria-hidden="true" /> {course.duration_hours} hours</span>
           </div>
 
           <div className={`mt-8 aspect-video overflow-hidden rounded-3xl bg-gradient-to-br ${meta.color} shadow-xl`}>
@@ -161,7 +161,7 @@ function Detail() {
                 "A repeatable study routine",
               ].map((t) => (
                 <li key={t} className="flex items-start gap-2 text-sm">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" /> {t}
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" /> {t}
                 </li>
               ))}
             </ul>
@@ -169,11 +169,11 @@ function Detail() {
 
           <section className="mt-10">
             <h2 className="font-display text-2xl font-bold">Lessons</h2>
-            <ol className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">
+            <ol className="mt-4 divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card" aria-label="Course lessons">
               {lessons.map((l) => (
                 <li key={l.id} className="flex items-center gap-4 p-4">
                   <div className="grid h-9 w-9 place-items-center rounded-full bg-primary-soft text-primary">
-                    <PlayCircle className="h-5 w-5" />
+                    <PlayCircle className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div className="flex-1 text-sm font-medium">{l.title}</div>
                   <div className="text-xs text-muted-foreground">{l.duration_min} min</div>
@@ -187,7 +187,7 @@ function Detail() {
         </div>
 
         <aside className="lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-3xl border border-border bg-card p-6 shadow-lg">
+          <div className="rounded-3xl border border-border bg-card p-6 shadow-lg" aria-live="polite">
             <div className="font-display text-3xl font-extrabold">Free</div>
             <div className="text-sm text-muted-foreground">Full access with your account</div>
 
@@ -198,11 +198,12 @@ function Detail() {
                     <span className="font-semibold">Your progress</span>
                     <span className="text-muted-foreground">{enrollment.progress}%</span>
                   </div>
-                  <Progress value={enrollment.progress} className="h-2" />
+                  <Progress value={enrollment.progress} aria-label={`Your progress: ${enrollment.progress} percent`} className="h-2" />
                 </div>
                 <Link to="/learn/$slug" params={{ slug: course.slug }} search={{ lesson: undefined }}>
                   <Button className="mt-5 w-full rounded-full" size="lg">
                     {enrollment.status === "completed" ? "Review course" : "Continue learning"}
+                    <span className="sr-only"> — {course.title}</span>
                   </Button>
                 </Link>
                 <Button
@@ -210,6 +211,7 @@ function Detail() {
                   size="lg"
                   variant="outline"
                   disabled={unenrollMut.isPending}
+                  aria-label={`Unenroll from ${course.title}`}
                   onClick={() => unenrollMut.mutate()}
                 >
                   {unenrollMut.isPending ? "Removing…" : "Unenroll"}
@@ -221,11 +223,12 @@ function Detail() {
                   className="mt-5 w-full rounded-full"
                   size="lg"
                   disabled={enrollMut.isPending}
+                  aria-label={`Enroll in ${course.title}`}
                   onClick={() => enrollMut.mutate()}
                 >
                   {enrollMut.isPending ? "Enrolling…" : "Enroll now"}
                 </Button>
-                <Button className="mt-2 w-full rounded-full" size="lg" variant="outline">Add to wishlist</Button>
+                <Button className="mt-2 w-full rounded-full" size="lg" variant="outline" aria-label={`Add ${course.title} to wishlist`}>Add to wishlist</Button>
               </>
             )}
 
@@ -235,7 +238,7 @@ function Detail() {
               <Row k="Lessons" v={`${lessons.length}`} />
               <Row k="Language" v="English" />
               <Row k="Certificate" v="Yes" />
-              <Row k="Views" v={`${course.student_count.toLocaleString()}+ learners`} icon={<Eye className="h-3.5 w-3.5" />} />
+              <Row k="Views" v={`${course.student_count.toLocaleString()}+ learners`} icon={<Eye className="h-3.5 w-3.5" aria-hidden="true" />} />
             </div>
           </div>
           <div className="mt-4 rounded-3xl border border-border bg-card p-6">
