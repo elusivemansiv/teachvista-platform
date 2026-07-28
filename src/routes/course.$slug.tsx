@@ -30,9 +30,11 @@ function CoursePage() {
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
-      <Suspense fallback={<div className="mx-auto max-w-5xl px-6 py-10 text-muted-foreground">Loading…</div>}>
-        <Detail />
-      </Suspense>
+      <main id="main-content">
+        <Suspense fallback={<div className="mx-auto max-w-5xl px-6 py-10 text-muted-foreground">Loading…</div>}>
+          <Detail />
+        </Suspense>
+      </main>
       <SiteFooter />
     </div>
   );
