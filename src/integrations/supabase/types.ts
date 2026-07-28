@@ -54,11 +54,16 @@ export type Database = {
           is_trending: boolean
           last_uploaded_at: string
           level: Database["public"]["Enums"]["course_level"]
+          moderation_note: string | null
+          moderation_status: Database["public"]["Enums"]["moderation_status"]
           popularity: number
           preview_video_url: string | null
           rating: number
+          reviewed_at: string | null
+          reviewed_by: string | null
           slug: string
           student_count: number
+          submitted_at: string | null
           target_band: number | null
           teacher_id: string | null
           teacher_name: string
@@ -76,11 +81,16 @@ export type Database = {
           is_trending?: boolean
           last_uploaded_at?: string
           level?: Database["public"]["Enums"]["course_level"]
+          moderation_note?: string | null
+          moderation_status?: Database["public"]["Enums"]["moderation_status"]
           popularity?: number
           preview_video_url?: string | null
           rating?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           slug: string
           student_count?: number
+          submitted_at?: string | null
           target_band?: number | null
           teacher_id?: string | null
           teacher_name: string
@@ -98,11 +108,16 @@ export type Database = {
           is_trending?: boolean
           last_uploaded_at?: string
           level?: Database["public"]["Enums"]["course_level"]
+          moderation_note?: string | null
+          moderation_status?: Database["public"]["Enums"]["moderation_status"]
           popularity?: number
           preview_video_url?: string | null
           rating?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           slug?: string
           student_count?: number
+          submitted_at?: string | null
           target_band?: number | null
           teacher_id?: string | null
           teacher_name?: string
@@ -199,29 +214,101 @@ export type Database = {
           },
         ]
       }
+      lesson_watch_events: {
+        Row: {
+          completed: boolean
+          course_id: string
+          created_at: string
+          id: string
+          lesson_id: string
+          occurred_at: string
+          user_id: string
+          watched_seconds: number
+        }
+        Insert: {
+          completed?: boolean
+          course_id: string
+          created_at?: string
+          id?: string
+          lesson_id: string
+          occurred_at?: string
+          user_id: string
+          watched_seconds?: number
+        }
+        Update: {
+          completed?: boolean
+          course_id?: string
+          created_at?: string
+          id?: string
+          lesson_id?: string
+          occurred_at?: string
+          user_id?: string
+          watched_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_watch_events_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_watch_events_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lessons: {
         Row: {
           course_id: string
+          draft_duration_min: number | null
+          draft_title: string | null
+          draft_video_url: string | null
           duration_min: number
+          has_draft: boolean
           id: string
+          moderation_status: Database["public"]["Enums"]["moderation_status"]
           ordering: number
+          publish_at: string | null
+          status: Database["public"]["Enums"]["lesson_status"]
           title: string
+          updated_at: string
           video_url: string | null
         }
         Insert: {
           course_id: string
+          draft_duration_min?: number | null
+          draft_title?: string | null
+          draft_video_url?: string | null
           duration_min?: number
+          has_draft?: boolean
           id?: string
+          moderation_status?: Database["public"]["Enums"]["moderation_status"]
           ordering?: number
+          publish_at?: string | null
+          status?: Database["public"]["Enums"]["lesson_status"]
           title: string
+          updated_at?: string
           video_url?: string | null
         }
         Update: {
           course_id?: string
+          draft_duration_min?: number | null
+          draft_title?: string | null
+          draft_video_url?: string | null
           duration_min?: number
+          has_draft?: boolean
           id?: string
+          moderation_status?: Database["public"]["Enums"]["moderation_status"]
           ordering?: number
+          publish_at?: string | null
+          status?: Database["public"]["Enums"]["lesson_status"]
           title?: string
+          updated_at?: string
           video_url?: string | null
         }
         Relationships: [
@@ -295,6 +382,7 @@ export type Database = {
         Args: { _course_id: string }
         Returns: undefined
       }
+      publish_due_lessons: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "learner" | "teacher" | "admin"
@@ -308,6 +396,8 @@ export type Database = {
         | "mock_test"
       course_level: "beginner" | "intermediate" | "advanced"
       enrollment_status: "active" | "completed" | "cancelled"
+      lesson_status: "draft" | "scheduled" | "published"
+      moderation_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -447,6 +537,8 @@ export const Constants = {
       ],
       course_level: ["beginner", "intermediate", "advanced"],
       enrollment_status: ["active", "completed", "cancelled"],
+      lesson_status: ["draft", "scheduled", "published"],
+      moderation_status: ["pending", "approved", "rejected"],
     },
   },
 } as const

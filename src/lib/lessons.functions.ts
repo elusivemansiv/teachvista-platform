@@ -119,3 +119,144 @@ export const setLessonCompletion = createServerFn({ method: "POST" })
 
     return { lessons: list, completedLessonIds: [...completed], nextLessonId: next?.id ?? null, progress };
   });
+
+/* ---------- Teacher: drafts & scheduled publishing ---------- */
+
+export type LessonStatus = "draft" | "scheduled" | "published";
+
+export type TeacherLesson = Lesson & {
+  status: LessonStatus;
+  publish_at: string | null;
+  has_draft: boolean;
+  draft_title: string | null;
+  draft_duration_min: number | null;
+  draft_video_url: string | null;
+  moderation_status: "pending" | "approved" | "rejected";
+  updated_at: string;
+};
+
+const TEACHER_LESSON_COLS =
+  "id, course_id, title, ordering, duration_min, video_url, status, publish_at, has_draft, draft_title, draft_duration_min, draft_video_url, moderation_status, updated_at";
+
+async function assertOwnsCourse(supabase: any, userId: string, courseId: string) {
+  const { data } = await supabase.from("courses").select("id").eq("id", courseId).eq("teacher_id", userId).maybeSingle();
+  if (!data) throw new Error("You do not own this course");
+}
+
+export const listTeacherLessons = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { courseId: string }) => d)
+  .handler(async ({ data, context }): Promise<TeacherLesson[]> => {
+    await assertOwnsCourse(context.supabase, context.userId, data.courseId);
+    const { data: rows, error } = await context.supabase
+      .from("lessons")
+      .select(TEACHER_LESSON_COLS)
+      .eq("course_id", data.courseId)
+      .order("ordering");
+    if (error) throw error;
+    return (rows ?? []) as TeacherLesson[];
+  });
+
+/** Saves pending edits without touching what learners currently see. */
+export const saveLessonDraft = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { lessonId: string; courseId: string; title: string; durationMin: number; videoUrl?: string | null }) => d)
+  .handler(async ({ data, context }) => {
+    await assertOwnsCourse(context.supabase, context.userId, data.courseId);
+    const { error } = await context.supabase
+      .from("lessons")
+      .update({
+        draft_title: data.title,
+        draft_duration_min: Math.max(1, Math.round(data.durationMin)),
+        draft_video_url: data.videoUrl ?? null,
+        has_draft: true,
+      })
+      .eq("id", data.lessonId)
+      .eq("course_id", data.courseId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const discardLessonDraft = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { lessonId: string; courseId: string }) => d)
+  .handler(async ({ data, context }) => {
+    await assertOwnsCourse(context.supabase, context.userId, data.courseId);
+    const { error } = await context.supabase
+      .from("lessons")
+      .update({ has_draft: false, draft_title: null, draft_duration_min: null, draft_video_url: null })
+      .eq("id", data.lessonId)
+      .eq("course_id", data.courseId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+/** Applies the draft live now, or schedules it for a future date. */
+export const publishLessonDraft = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { lessonId: string; courseId: string; publishAt?: string | null }) => d)
+  .handler(async ({ data, context }) => {
+    await assertOwnsCourse(context.supabase, context.userId, data.courseId);
+    const { data: row, error: rErr } = await context.supabase
+      .from("lessons")
+      .select(TEACHER_LESSON_COLS)
+      .eq("id", data.lessonId)
+      .eq("course_id", data.courseId)
+      .maybeSingle();
+    if (rErr) throw rErr;
+    if (!row) throw new Error("Lesson not found");
+    const l = row as TeacherLesson;
+
+    const patch = {
+      title: l.has_draft && l.draft_title ? l.draft_title : l.title,
+      duration_min: l.has_draft && l.draft_duration_min ? l.draft_duration_min : l.duration_min,
+      video_url: l.has_draft ? l.draft_video_url : l.video_url,
+      has_draft: false,
+      draft_title: null,
+      draft_duration_min: null,
+      draft_video_url: null,
+      status: "published" as LessonStatus,
+      publish_at: null as string | null,
+    };
+
+    if (data.publishAt && new Date(data.publishAt).getTime() > Date.now()) {
+      patch.status = "scheduled";
+      patch.publish_at = data.publishAt;
+    }
+
+    const { error } = await context.supabase.from("lessons").update(patch).eq("id", data.lessonId);
+    if (error) throw error;
+    return { ok: true, scheduled: patch.status === "scheduled" };
+  });
+
+export const unpublishLesson = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { lessonId: string; courseId: string }) => d)
+  .handler(async ({ data, context }) => {
+    await assertOwnsCourse(context.supabase, context.userId, data.courseId);
+    const { error } = await context.supabase
+      .from("lessons")
+      .update({ status: "draft", publish_at: null })
+      .eq("id", data.lessonId)
+      .eq("course_id", data.courseId);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+/* ---------- Learner: watch telemetry ---------- */
+
+export const recordLessonWatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { courseId: string; lessonId: string; watchedSeconds: number; completed?: boolean }) => d)
+  .handler(async ({ data, context }) => {
+    if (data.watchedSeconds <= 0) return { ok: true };
+    const { error } = await context.supabase.from("lesson_watch_events").insert({
+      user_id: context.userId,
+      course_id: data.courseId,
+      lesson_id: data.lessonId,
+      watched_seconds: Math.min(60 * 60 * 6, Math.round(data.watchedSeconds)),
+      completed: !!data.completed,
+    });
+    if (error) throw error;
+    return { ok: true };
+  });

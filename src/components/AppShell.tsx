@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useRouterState } from "@tanstack/react-router";
 import { getRouteApi } from "@tanstack/react-router";
-import { GraduationCap, LayoutDashboard, Compass, PlayCircle, Upload, LogOut, User } from "lucide-react";
+import { GraduationCap, LayoutDashboard, Compass, PlayCircle, Upload, LogOut, User, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -28,6 +28,11 @@ const learnerItems = [
 const teacherItems = [
   { title: "Teacher portal", url: "/teacher", icon: LayoutDashboard },
   { title: "Upload course", url: "/teacher/upload", icon: Upload },
+  { title: "Browse courses", url: "/browse", icon: Compass },
+];
+
+const adminItems = [
+  { title: "Moderation queue", url: "/admin", icon: ShieldCheck },
   { title: "Browse courses", url: "/browse", icon: Compass },
 ];
 
@@ -52,7 +57,7 @@ function AppSidebar() {
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { role } = authRouteApi.useRouteContext();
-  const items = role === "teacher" ? teacherItems : learnerItems;
+  const items = role === "admin" ? adminItems : role === "teacher" ? teacherItems : learnerItems;
 
   return (
     <Sidebar collapsible="icon">
