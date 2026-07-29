@@ -321,6 +321,114 @@ export type Database = {
           },
         ]
       }
+      moderation_audit_log: {
+        Row: {
+          action: string
+          actor_id: string
+          actor_name: string | null
+          course_id: string | null
+          created_at: string
+          entity_title: string
+          entity_type: string
+          id: string
+          lesson_id: string | null
+          note: string | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          actor_name?: string | null
+          course_id?: string | null
+          created_at?: string
+          entity_title: string
+          entity_type: string
+          id?: string
+          lesson_id?: string | null
+          note?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          actor_name?: string | null
+          course_id?: string | null
+          created_at?: string
+          entity_title?: string
+          entity_type?: string
+          id?: string
+          lesson_id?: string | null
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "moderation_audit_log_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "moderation_audit_log_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          course_id: string | null
+          created_at: string
+          id: string
+          lesson_id: string | null
+          link: string | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          lesson_id?: string | null
+          link?: string | null
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          lesson_id?: string | null
+          link?: string | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
