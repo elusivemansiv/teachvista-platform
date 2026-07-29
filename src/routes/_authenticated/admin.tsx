@@ -41,9 +41,11 @@ const TABS: { value: ModerationStatus | "all"; label: string }[] = [
 
 function Queue() {
   const [tab, setTab] = useState<ModerationStatus | "all">("pending");
+  const [view, setView] = useState<"queue" | "audit">("queue");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const queryClient = useQueryClient();
   const fetchQueue = useServerFn(listModerationQueue);
+  const fetchAudit = useServerFn(listAuditLog);
   const reviewCourseFn = useServerFn(reviewCourse);
   const reviewLessonFn = useServerFn(reviewLesson);
 
@@ -51,6 +53,13 @@ function Queue() {
     queryKey: ["moderation-queue", tab],
     queryFn: () => fetchQueue({ data: { status: tab } }),
   });
+
+  const { data: audit = [] } = useQuery({
+    queryKey: ["moderation-audit"],
+    queryFn: () => fetchAudit({ data: {} }),
+    enabled: view === "audit",
+  });
+
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["moderation-queue"] });
