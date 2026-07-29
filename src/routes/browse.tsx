@@ -97,7 +97,8 @@ function BrowseInner() {
       if (search.level && c.level !== search.level) return false;
       if (durTest && !durTest(Number(c.duration_hours))) return false;
       if (band && (c.target_band === null || Number(c.target_band) < band)) return false;
-      if (query && !`${c.title} ${c.description} ${c.teacher_name}`.toLowerCase().includes(query.toLowerCase()))
+      const term = (search.q ?? "").trim().toLowerCase();
+      if (term && !`${c.title} ${c.description} ${c.teacher_name}`.toLowerCase().includes(term))
         return false;
       return true;
     });
@@ -112,7 +113,7 @@ function BrowseInner() {
             : c.popularity;
     const sign = search.dir === "asc" ? -1 : 1;
     return [...list].sort((a, b) => (value(b) - value(a)) * sign);
-  }, [courses, search.category, search.level, search.duration, search.band, search.sort, search.dir, query]);
+  }, [courses, search.category, search.level, search.duration, search.band, search.sort, search.dir, search.q]);
 
   const page = Math.max(1, search.page ?? 1);
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
