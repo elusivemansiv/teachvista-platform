@@ -66,7 +66,7 @@ export function NotificationBell() {
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
                   {n.link ? (
-                    <Link to={n.link} className="text-sm font-semibold hover:underline">
+                    <Link to={n.link as never} className="text-sm font-semibold hover:underline">
                       {n.title}
                     </Link>
                   ) : (
