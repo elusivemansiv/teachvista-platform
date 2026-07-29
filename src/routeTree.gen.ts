@@ -19,6 +19,7 @@ import { Route as AuthenticatedMyCoursesRouteImport } from './routes/_authentica
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedTeacherUploadRouteImport } from './routes/_authenticated/teacher.upload'
+import { Route as AuthenticatedTeacherBulkRouteImport } from './routes/_authenticated/teacher.bulk'
 import { Route as AuthenticatedLearnSlugRouteImport } from './routes/_authenticated/learn.$slug'
 import { Route as AuthenticatedTeacherCourseCourseIdRouteImport } from './routes/_authenticated/teacher.course.$courseId'
 
@@ -72,6 +73,12 @@ const AuthenticatedTeacherUploadRoute =
     path: '/upload',
     getParentRoute: () => AuthenticatedTeacherRoute,
   } as any)
+const AuthenticatedTeacherBulkRoute =
+  AuthenticatedTeacherBulkRouteImport.update({
+    id: '/bulk',
+    path: '/bulk',
+    getParentRoute: () => AuthenticatedTeacherRoute,
+  } as any)
 const AuthenticatedLearnSlugRoute = AuthenticatedLearnSlugRouteImport.update({
   id: '/learn/$slug',
   path: '/learn/$slug',
@@ -94,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/course/$slug': typeof CourseSlugRoute
   '/learn/$slug': typeof AuthenticatedLearnSlugRoute
+  '/teacher/bulk': typeof AuthenticatedTeacherBulkRoute
   '/teacher/upload': typeof AuthenticatedTeacherUploadRoute
   '/teacher/course/$courseId': typeof AuthenticatedTeacherCourseCourseIdRoute
 }
@@ -107,6 +115,7 @@ export interface FileRoutesByTo {
   '/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/course/$slug': typeof CourseSlugRoute
   '/learn/$slug': typeof AuthenticatedLearnSlugRoute
+  '/teacher/bulk': typeof AuthenticatedTeacherBulkRoute
   '/teacher/upload': typeof AuthenticatedTeacherUploadRoute
   '/teacher/course/$courseId': typeof AuthenticatedTeacherCourseCourseIdRoute
 }
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/_authenticated/teacher': typeof AuthenticatedTeacherRouteWithChildren
   '/course/$slug': typeof CourseSlugRoute
   '/_authenticated/learn/$slug': typeof AuthenticatedLearnSlugRoute
+  '/_authenticated/teacher/bulk': typeof AuthenticatedTeacherBulkRoute
   '/_authenticated/teacher/upload': typeof AuthenticatedTeacherUploadRoute
   '/_authenticated/teacher/course/$courseId': typeof AuthenticatedTeacherCourseCourseIdRoute
 }
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/teacher'
     | '/course/$slug'
     | '/learn/$slug'
+    | '/teacher/bulk'
     | '/teacher/upload'
     | '/teacher/course/$courseId'
   fileRoutesByTo: FileRoutesByTo
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/teacher'
     | '/course/$slug'
     | '/learn/$slug'
+    | '/teacher/bulk'
     | '/teacher/upload'
     | '/teacher/course/$courseId'
   id:
@@ -164,6 +176,7 @@ export interface FileRouteTypes {
     | '/_authenticated/teacher'
     | '/course/$slug'
     | '/_authenticated/learn/$slug'
+    | '/_authenticated/teacher/bulk'
     | '/_authenticated/teacher/upload'
     | '/_authenticated/teacher/course/$courseId'
   fileRoutesById: FileRoutesById
@@ -248,6 +261,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeacherUploadRouteImport
       parentRoute: typeof AuthenticatedTeacherRoute
     }
+    '/_authenticated/teacher/bulk': {
+      id: '/_authenticated/teacher/bulk'
+      path: '/bulk'
+      fullPath: '/teacher/bulk'
+      preLoaderRoute: typeof AuthenticatedTeacherBulkRouteImport
+      parentRoute: typeof AuthenticatedTeacherRoute
+    }
     '/_authenticated/learn/$slug': {
       id: '/_authenticated/learn/$slug'
       path: '/learn/$slug'
@@ -266,11 +286,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedTeacherRouteChildren {
+  AuthenticatedTeacherBulkRoute: typeof AuthenticatedTeacherBulkRoute
   AuthenticatedTeacherUploadRoute: typeof AuthenticatedTeacherUploadRoute
   AuthenticatedTeacherCourseCourseIdRoute: typeof AuthenticatedTeacherCourseCourseIdRoute
 }
 
 const AuthenticatedTeacherRouteChildren: AuthenticatedTeacherRouteChildren = {
+  AuthenticatedTeacherBulkRoute: AuthenticatedTeacherBulkRoute,
   AuthenticatedTeacherUploadRoute: AuthenticatedTeacherUploadRoute,
   AuthenticatedTeacherCourseCourseIdRoute:
     AuthenticatedTeacherCourseCourseIdRoute,
