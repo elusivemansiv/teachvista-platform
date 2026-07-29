@@ -15,9 +15,10 @@ import {
 } from "@/components/ui/sidebar";
 import { useRouterState } from "@tanstack/react-router";
 import { getRouteApi } from "@tanstack/react-router";
-import { GraduationCap, LayoutDashboard, Compass, PlayCircle, Upload, LogOut, User, ShieldCheck } from "lucide-react";
+import { GraduationCap, LayoutDashboard, Compass, PlayCircle, Upload, LogOut, User, ShieldCheck, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
+import { NotificationBell } from "@/components/NotificationBell";
 
 const learnerItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -28,8 +29,10 @@ const learnerItems = [
 const teacherItems = [
   { title: "Teacher portal", url: "/teacher", icon: LayoutDashboard },
   { title: "Upload course", url: "/teacher/upload", icon: Upload },
+  { title: "Bulk lessons", url: "/teacher/bulk", icon: FileSpreadsheet },
   { title: "Browse courses", url: "/browse", icon: Compass },
 ];
+
 
 const adminItems = [
   { title: "Moderation queue", url: "/admin", icon: ShieldCheck },
@@ -103,6 +106,8 @@ function TopBar() {
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur sm:px-6">
       <SidebarTrigger />
       <div className="ml-auto flex items-center gap-2">
+        <NotificationBell />
+
         <div className="hidden items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm md:flex">
           <User className="h-4 w-4 text-muted-foreground" />
           <span className="text-muted-foreground">Signed in</span>

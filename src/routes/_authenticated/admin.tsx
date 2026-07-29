@@ -1,11 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useSuspenseQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSuspenseQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Suspense, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { listModerationQueue, reviewCourse, reviewLesson, type ModerationStatus } from "@/lib/admin.functions";
+import { listAuditLog, listModerationQueue, reviewCourse, reviewLesson, type ModerationStatus } from "@/lib/admin.functions";
 import { categoryLabel } from "@/lib/courses";
 import { toast } from "sonner";
 import { ShieldCheck, Check, X, Clock } from "lucide-react";
@@ -41,9 +41,11 @@ const TABS: { value: ModerationStatus | "all"; label: string }[] = [
 
 function Queue() {
   const [tab, setTab] = useState<ModerationStatus | "all">("pending");
+  const [view, setView] = useState<"queue" | "audit">("queue");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const queryClient = useQueryClient();
   const fetchQueue = useServerFn(listModerationQueue);
+  const fetchAudit = useServerFn(listAuditLog);
   const reviewCourseFn = useServerFn(reviewCourse);
   const reviewLessonFn = useServerFn(reviewLesson);
 
@@ -52,7 +54,15 @@ function Queue() {
     queryFn: () => fetchQueue({ data: { status: tab } }),
   });
 
+  const { data: audit = [] } = useQuery({
+    queryKey: ["moderation-audit"],
+    queryFn: () => fetchAudit({ data: {} }),
+    enabled: view === "audit",
+  });
+
+
   const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["moderation-audit"] });
     queryClient.invalidateQueries({ queryKey: ["moderation-queue"] });
     queryClient.invalidateQueries({ queryKey: ["courses", "public"] });
   };
@@ -87,6 +97,50 @@ function Queue() {
         </p>
       </header>
 
+      <div role="tablist" aria-label="Admin section" className="flex gap-2">
+        {(["queue", "audit"] as const).map((v) => (
+          <button
+            key={v}
+            role="tab"
+            aria-selected={view === v}
+            onClick={() => setView(v)}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+              view === v ? "bg-foreground text-background" : "bg-secondary hover:bg-secondary/80"
+            }`}
+          >
+            {v === "queue" ? "Queue" : "Audit log"}
+          </button>
+        ))}
+      </div>
+
+      {view === "audit" ? (
+        <section className="rounded-3xl border border-border bg-card p-6">
+          <h2 className="font-display text-xl font-bold">Moderation audit log</h2>
+          <p className="text-sm text-muted-foreground">Every approval, rejection and reviewer note, newest first.</p>
+          {audit.length === 0 ? (
+            <p className="mt-6 text-sm text-muted-foreground">No moderation actions recorded yet.</p>
+          ) : (
+            <ul className="mt-4 divide-y divide-border rounded-2xl border border-border">
+              {audit.map((a) => (
+                <li key={a.id} className="flex flex-wrap items-start gap-3 p-4 text-sm">
+                  <StatusBadge status={a.action as ModerationStatus} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold">
+                      <span className="capitalize text-muted-foreground">{a.entity_type}:</span> {a.entity_title}
+                    </p>
+                    {a.note && <p className="mt-0.5 text-muted-foreground">Note: {a.note}</p>}
+                  </div>
+                  <div className="text-right text-xs text-muted-foreground">
+                    <p>{a.actor_name ?? "Admin"}</p>
+                    <p>{new Date(a.created_at).toLocaleString()}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : (
+      <>
       <div role="tablist" aria-label="Filter by review status" className="flex flex-wrap gap-2">
         {TABS.map((t) => (
           <button
@@ -209,6 +263,8 @@ function Queue() {
           </li>
         ))}
       </ul>
+      </>
+      )}
     </div>
   );
 }

@@ -226,7 +226,23 @@ export const publishLessonDraft = createServerFn({ method: "POST" })
 
     const { error } = await context.supabase.from("lessons").update(patch).eq("id", data.lessonId);
     if (error) throw error;
-    return { ok: true, scheduled: patch.status === "scheduled" };
+
+    const scheduled = patch.status === "scheduled";
+    await context.supabase.from("notifications").insert({
+      user_id: context.userId,
+      type: scheduled ? "lesson_scheduled" : "lesson_published",
+      title: scheduled
+        ? `Scheduled: ${patch.title}`
+        : `Published: ${patch.title}`,
+      body: scheduled
+        ? `Goes live on ${new Date(patch.publish_at as string).toLocaleString()}.`
+        : "Your draft edits are now live for learners.",
+      link: `/teacher/course/${data.courseId}`,
+      course_id: data.courseId,
+      lesson_id: data.lessonId,
+    });
+
+    return { ok: true, scheduled };
   });
 
 export const unpublishLesson = createServerFn({ method: "POST" })

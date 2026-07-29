@@ -71,11 +71,51 @@ export const listModerationQueue = createServerFn({ method: "GET" })
     }));
   });
 
+export type AuditEntry = {
+  id: string;
+  entity_type: string;
+  entity_title: string;
+  action: string;
+  note: string | null;
+  actor_name: string | null;
+  course_id: string | null;
+  lesson_id: string | null;
+  created_at: string;
+};
+
+const AUDIT_COLS = "id, entity_type, entity_title, action, note, actor_name, course_id, lesson_id, created_at";
+
+async function actorName(context: { supabase: any; userId: string }) {
+  const { data } = await context.supabase.from("profiles").select("full_name").eq("id", context.userId).maybeSingle();
+  return (data?.full_name as string | null) ?? "Admin";
+}
+
+export const listAuditLog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { courseId?: string } | undefined) => d ?? {})
+  .handler(async ({ data, context }): Promise<AuditEntry[]> => {
+    let q = context.supabase
+      .from("moderation_audit_log")
+      .select(AUDIT_COLS)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (data.courseId) q = q.eq("course_id", data.courseId);
+    const { data: rows, error } = await q;
+    if (error) throw error;
+    return (rows ?? []) as AuditEntry[];
+  });
+
 export const reviewCourse = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { courseId: string; status: ModerationStatus; note?: string }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
+    const { data: course } = await context.supabase
+      .from("courses")
+      .select("id, title, teacher_id")
+      .eq("id", data.courseId)
+      .maybeSingle();
+
     const { error } = await context.supabase
       .from("courses")
       .update({
@@ -86,6 +126,34 @@ export const reviewCourse = createServerFn({ method: "POST" })
       })
       .eq("id", data.courseId);
     if (error) throw error;
+
+    const name = await actorName(context as never);
+    await context.supabase.from("moderation_audit_log").insert({
+      entity_type: "course",
+      course_id: data.courseId,
+      entity_title: course?.title ?? "Course",
+      action: data.status,
+      note: data.note ?? null,
+      actor_id: context.userId,
+      actor_name: name,
+    });
+
+    if (course?.teacher_id) {
+      await context.supabase.from("notifications").insert({
+        user_id: course.teacher_id,
+        type: `course_${data.status}`,
+        title:
+          data.status === "approved"
+            ? `Approved: ${course.title}`
+            : data.status === "rejected"
+              ? `Changes requested: ${course.title}`
+              : `Under review: ${course.title}`,
+        body: data.note ? `Reviewer note: ${data.note}` : `Your course was marked ${data.status} by ${name}.`,
+        link: `/teacher/course/${data.courseId}`,
+        course_id: data.courseId,
+      });
+    }
+
     return { ok: true };
   });
 
@@ -94,10 +162,48 @@ export const reviewLesson = createServerFn({ method: "POST" })
   .inputValidator((d: { lessonId: string; status: ModerationStatus }) => d)
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
+    const { data: lesson } = await context.supabase
+      .from("lessons")
+      .select("id, title, course_id")
+      .eq("id", data.lessonId)
+      .maybeSingle();
+
     const { error } = await context.supabase
       .from("lessons")
       .update({ moderation_status: data.status })
       .eq("id", data.lessonId);
     if (error) throw error;
+
+    const name = await actorName(context as never);
+    await context.supabase.from("moderation_audit_log").insert({
+      entity_type: "lesson",
+      course_id: lesson?.course_id ?? null,
+      lesson_id: data.lessonId,
+      entity_title: lesson?.title ?? "Lesson",
+      action: data.status,
+      actor_id: context.userId,
+      actor_name: name,
+    });
+
+    if (lesson?.course_id) {
+      const { data: course } = await context.supabase
+        .from("courses")
+        .select("teacher_id, title")
+        .eq("id", lesson.course_id)
+        .maybeSingle();
+      if (course?.teacher_id) {
+        await context.supabase.from("notifications").insert({
+          user_id: course.teacher_id,
+          type: `lesson_${data.status}`,
+          title: `Lesson ${data.status}: ${lesson.title}`,
+          body: `In "${course.title}" · reviewed by ${name}.`,
+          link: `/teacher/course/${lesson.course_id}`,
+          course_id: lesson.course_id,
+          lesson_id: data.lessonId,
+        });
+      }
+    }
+
     return { ok: true };
   });
+

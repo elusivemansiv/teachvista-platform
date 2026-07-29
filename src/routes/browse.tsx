@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { listCourses } from "@/lib/courses.functions";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -16,7 +16,11 @@ const searchSchema = z.object({
   duration: z.string().optional(),
   band: z.string().optional(),
   sort: z.string().optional(),
+  dir: z.enum(["asc", "desc"]).optional(),
+  page: z.coerce.number().int().min(1).optional(),
 });
+
+const PAGE_SIZE = 9;
 
 type BrowseSearch = z.infer<typeof searchSchema>;
 
@@ -70,7 +74,20 @@ function BrowseInner() {
   });
 
   const setParam = (patch: Partial<BrowseSearch>) =>
-    navigate({ search: (s: BrowseSearch) => ({ ...s, ...patch }) });
+    navigate({ search: (s: BrowseSearch) => ({ ...s, page: undefined, ...patch }) });
+
+  // Debounce the search box so results settle instead of flickering per keystroke.
+  useEffect(() => {
+    const current = search.q ?? "";
+    if (query === current) return;
+    const t = setTimeout(() => {
+      navigate({
+        search: (s: BrowseSearch) => ({ ...s, q: query.trim() || undefined, page: undefined }),
+        replace: true,
+      });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [query, search.q, navigate]);
 
   const filtered = useMemo(() => {
     const durTest = DURATIONS.find((d) => d.value === search.duration)?.test;
@@ -80,18 +97,29 @@ function BrowseInner() {
       if (search.level && c.level !== search.level) return false;
       if (durTest && !durTest(Number(c.duration_hours))) return false;
       if (band && (c.target_band === null || Number(c.target_band) < band)) return false;
-      if (query && !`${c.title} ${c.description} ${c.teacher_name}`.toLowerCase().includes(query.toLowerCase()))
+      const term = (search.q ?? "").trim().toLowerCase();
+      if (term && !`${c.title} ${c.description} ${c.teacher_name}`.toLowerCase().includes(term))
         return false;
       return true;
     });
-    const sorted = [...list];
-    if (search.sort === "rating") sorted.sort((a, b) => b.rating - a.rating);
-    else if (search.sort === "newest")
-      sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    else if (search.sort === "shortest") sorted.sort((a, b) => a.duration_hours - b.duration_hours);
-    else sorted.sort((a, b) => b.popularity - a.popularity);
-    return sorted;
-  }, [courses, search.category, search.level, search.duration, search.band, search.sort, query]);
+    const key = search.sort ?? "popular";
+    const value = (c: (typeof list)[number]) =>
+      key === "rating"
+        ? c.rating
+        : key === "newest"
+          ? new Date(c.created_at).getTime()
+          : key === "shortest"
+            ? -c.duration_hours
+            : c.popularity;
+    const sign = search.dir === "asc" ? -1 : 1;
+    return [...list].sort((a, b) => (value(b) - value(a)) * sign);
+  }, [courses, search.category, search.level, search.duration, search.band, search.sort, search.dir, search.q]);
+
+  const page = Math.max(1, search.page ?? 1);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const goToPage = (p: number) => navigate({ search: (s: BrowseSearch) => ({ ...s, page: p === 1 ? undefined : p }) });
 
   const activeFilters =
     Number(!!search.category) + Number(!!search.level) + Number(!!search.duration) + Number(!!search.band);
@@ -163,6 +191,17 @@ function BrowseInner() {
           onChange={(v) => setParam({ sort: v })}
           options={SORTS.map((s) => ({ value: s.value, label: s.label }))}
         />
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-muted-foreground">Order</span>
+          <button
+            type="button"
+            onClick={() => setParam({ dir: search.dir === "asc" ? "desc" : "asc" })}
+            aria-label={`Sort order: ${search.dir === "asc" ? "ascending" : "descending"}. Activate to switch.`}
+            className="flex min-h-11 items-center gap-2 rounded-full border border-border bg-background px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {search.dir === "asc" ? "Ascending" : "Descending"}
+          </button>
+        </div>
         {activeFilters > 0 && (
           <button
             type="button"
@@ -176,15 +215,50 @@ function BrowseInner() {
 
       <p aria-live="polite" className="mt-4 text-sm text-muted-foreground">
         {filtered.length} course{filtered.length === 1 ? "" : "s"} found
+        {filtered.length > PAGE_SIZE && ` · page ${safePage} of ${pageCount}`}
       </p>
 
       <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((c) => (
+        {pageItems.map((c) => (
           <CourseCard key={c.id} course={c} />
         ))}
       </div>
       {filtered.length === 0 && (
         <div className="mt-16 text-center text-muted-foreground">No courses match your filters.</div>
+      )}
+
+      {pageCount > 1 && (
+        <nav aria-label="Course results pages" className="mt-10 flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => goToPage(safePage - 1)}
+            disabled={safePage === 1}
+            className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Previous
+          </button>
+          {Array.from({ length: pageCount }, (_, i) => i + 1).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => goToPage(p)}
+              aria-current={p === safePage ? "page" : undefined}
+              className={`min-h-11 min-w-11 rounded-full px-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                p === safePage ? "bg-primary text-primary-foreground" : "bg-secondary hover:bg-secondary/80"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => goToPage(safePage + 1)}
+            disabled={safePage === pageCount}
+            className="min-h-11 rounded-full border border-border px-4 text-sm font-semibold disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Next
+          </button>
+        </nav>
       )}
     </div>
   );
