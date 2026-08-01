@@ -42,7 +42,21 @@ type Lesson = { title: string; duration: string };
 function UploadForm() {
   const navigate = useNavigate();
   const [lessons, setLessons] = useState<Lesson[]>([{ title: "", duration: "10" }]);
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  function onThumbnail(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const check = validateUpload("thumbnail", { name: file.name, size: file.size, type: file.type });
+    if (!check.ok) {
+      toast.error(check.error);
+      e.target.value = "";
+      setThumbnail(null);
+      return;
+    }
+    setThumbnail(`${check.fileName} · ${formatBytes(file.size)}`);
+  }
 
   function updateLesson(i: number, patch: Partial<Lesson>) {
     setLessons((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
