@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CATEGORIES } from "@/lib/courses";
+import { UPLOAD_RULES, formatBytes, validateUpload } from "@/lib/uploads";
 import { ArrowLeft, ImagePlus, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
