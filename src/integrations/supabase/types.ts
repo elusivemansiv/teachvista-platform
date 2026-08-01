@@ -456,6 +456,86 @@ export type Database = {
         }
         Relationships: []
       }
+      security_findings: {
+        Row: {
+          code: string
+          created_at: string
+          detail: string | null
+          id: string
+          remediation: string | null
+          resource: string
+          run_id: string
+          severity: string
+          title: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          remediation?: string | null
+          resource: string
+          run_id: string
+          severity?: string
+          title: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          remediation?: string | null
+          resource?: string
+          run_id?: string
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_findings_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "security_scan_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_scan_runs: {
+        Row: {
+          created_at: string
+          critical_count: number
+          error: string | null
+          findings_count: number
+          finished_at: string | null
+          id: string
+          started_at: string
+          status: string
+          trigger: string
+        }
+        Insert: {
+          created_at?: string
+          critical_count?: number
+          error?: string | null
+          findings_count?: number
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          trigger?: string
+        }
+        Update: {
+          created_at?: string
+          critical_count?: number
+          error?: string | null
+          findings_count?: number
+          finished_at?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          trigger?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -487,6 +567,7 @@ export type Database = {
         Returns: boolean
       }
       publish_due_lessons: { Args: never; Returns: undefined }
+      run_security_checks: { Args: never; Returns: Json }
     }
     Enums: {
       app_role: "learner" | "teacher" | "admin"
