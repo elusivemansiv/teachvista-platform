@@ -36,6 +36,7 @@ const teacherItems = [
 
 const adminItems = [
   { title: "Moderation queue", url: "/admin", icon: ShieldCheck },
+  { title: "Security findings", url: "/admin-security", icon: ShieldAlert },
   { title: "Browse courses", url: "/browse", icon: Compass },
 ];
 
