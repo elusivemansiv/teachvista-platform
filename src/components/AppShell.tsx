@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useRouterState } from "@tanstack/react-router";
 import { getRouteApi } from "@tanstack/react-router";
-import { GraduationCap, LayoutDashboard, Compass, PlayCircle, Upload, LogOut, User, ShieldCheck, FileSpreadsheet } from "lucide-react";
+import { GraduationCap, LayoutDashboard, Compass, PlayCircle, Upload, LogOut, User, ShieldCheck, ShieldAlert, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -36,6 +36,7 @@ const teacherItems = [
 
 const adminItems = [
   { title: "Moderation queue", url: "/admin", icon: ShieldCheck },
+  { title: "Security findings", url: "/admin-security", icon: ShieldAlert },
   { title: "Browse courses", url: "/browse", icon: Compass },
 ];
 

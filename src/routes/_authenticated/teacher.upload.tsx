@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CATEGORIES } from "@/lib/courses";
+import { UPLOAD_RULES, formatBytes, validateUpload } from "@/lib/uploads";
 import { ArrowLeft, ImagePlus, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
@@ -41,7 +42,21 @@ type Lesson = { title: string; duration: string };
 function UploadForm() {
   const navigate = useNavigate();
   const [lessons, setLessons] = useState<Lesson[]>([{ title: "", duration: "10" }]);
+  const [thumbnail, setThumbnail] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  function onThumbnail(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const check = validateUpload("thumbnail", { name: file.name, size: file.size, type: file.type });
+    if (!check.ok) {
+      toast.error(check.error);
+      e.target.value = "";
+      setThumbnail(null);
+      return;
+    }
+    setThumbnail(`${check.fileName} · ${formatBytes(file.size)}`);
+  }
 
   function updateLesson(i: number, patch: Partial<Lesson>) {
     setLessons((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
@@ -113,10 +128,19 @@ function UploadForm() {
           <label className="mt-4 flex aspect-[16/6] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-border bg-secondary/40 text-muted-foreground transition hover:border-primary hover:text-primary">
             <div className="text-center">
               <ImagePlus className="mx-auto h-8 w-8" />
-              <div className="mt-2 text-sm font-semibold">Click to upload thumbnail</div>
-              <div className="text-xs">JPG or PNG, 1600×900 recommended</div>
+              <div className="mt-2 text-sm font-semibold">
+                {thumbnail ? thumbnail : "Click to upload thumbnail"}
+              </div>
+              <div className="text-xs">
+                {UPLOAD_RULES.thumbnail.extensions.join(", ")} · max {formatBytes(UPLOAD_RULES.thumbnail.maxBytes)} · 1600×900 recommended
+              </div>
             </div>
-            <input type="file" accept="image/*" className="hidden" />
+            <input
+              type="file"
+              accept={UPLOAD_RULES.thumbnail.mimeTypes.join(",")}
+              className="hidden"
+              onChange={onThumbnail}
+            />
           </label>
         </div>
 
