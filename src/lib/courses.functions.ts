@@ -49,9 +49,9 @@ export const getCourseBySlug = createServerFn({ method: "GET" })
 export const recordCourseView = createServerFn({ method: "POST" })
   .inputValidator((d: { courseId: string }) => d)
   .handler(async ({ data }) => {
-    const sb = serverSupabase();
-    await sb.from("course_views").insert({ course_id: data.courseId, user_id: null });
-    const { error } = await sb.rpc("increment_course_view", { _course_id: data.courseId });
+    const { error } = await serverSupabase()
+      .from("course_views")
+      .insert({ course_id: data.courseId, user_id: null });
     if (error) throw error;
     return { ok: true };
   });
@@ -61,6 +61,5 @@ export const recordMyCourseView = createServerFn({ method: "POST" })
   .inputValidator((d: { courseId: string }) => d)
   .handler(async ({ data, context }) => {
     await context.supabase.from("course_views").insert({ course_id: data.courseId, user_id: context.userId });
-    await context.supabase.rpc("increment_course_view", { _course_id: data.courseId });
     return { ok: true };
   });
