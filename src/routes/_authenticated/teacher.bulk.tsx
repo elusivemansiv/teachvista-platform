@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { listTeacherCourseAnalytics } from "@/lib/teacher.functions";
 import { bulkCreateLessons } from "@/lib/bulk-lessons.functions";
 import { downloadCsvTemplate, parseBulkLessonCsv, type BulkLessonRow } from "@/lib/bulk-lessons";
+import { UPLOAD_RULES, formatBytes, validateUpload } from "@/lib/uploads";
 import { toast } from "sonner";
 import { Download, FileSpreadsheet, Upload, AlertTriangle } from "lucide-react";
 
