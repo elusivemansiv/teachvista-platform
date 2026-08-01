@@ -486,10 +486,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      increment_course_view: {
-        Args: { _course_id: string }
-        Returns: undefined
-      }
       publish_due_lessons: { Args: never; Returns: undefined }
     }
     Enums: {
