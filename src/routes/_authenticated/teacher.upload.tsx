@@ -113,10 +113,19 @@ function UploadForm() {
           <label className="mt-4 flex aspect-[16/6] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed border-border bg-secondary/40 text-muted-foreground transition hover:border-primary hover:text-primary">
             <div className="text-center">
               <ImagePlus className="mx-auto h-8 w-8" />
-              <div className="mt-2 text-sm font-semibold">Click to upload thumbnail</div>
-              <div className="text-xs">JPG or PNG, 1600×900 recommended</div>
+              <div className="mt-2 text-sm font-semibold">
+                {thumbnail ? thumbnail : "Click to upload thumbnail"}
+              </div>
+              <div className="text-xs">
+                {UPLOAD_RULES.thumbnail.extensions.join(", ")} · max {formatBytes(UPLOAD_RULES.thumbnail.maxBytes)} · 1600×900 recommended
+              </div>
             </div>
-            <input type="file" accept="image/*" className="hidden" />
+            <input
+              type="file"
+              accept={UPLOAD_RULES.thumbnail.mimeTypes.join(",")}
+              className="hidden"
+              onChange={onThumbnail}
+            />
           </label>
         </div>
 
