@@ -21,6 +21,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedTeacherUploadRouteImport } from './routes/_authenticated/teacher.upload'
 import { Route as AuthenticatedTeacherBulkRouteImport } from './routes/_authenticated/teacher.bulk'
 import { Route as AuthenticatedLearnSlugRouteImport } from './routes/_authenticated/learn.$slug'
+import { Route as ApiPublicHooksSecurityScanRouteImport } from './routes/api/public/hooks/security-scan'
 import { Route as AuthenticatedTeacherCourseCourseIdRouteImport } from './routes/_authenticated/teacher.course.$courseId'
 
 const BrowseRoute = BrowseRouteImport.update({
@@ -84,6 +85,12 @@ const AuthenticatedLearnSlugRoute = AuthenticatedLearnSlugRouteImport.update({
   path: '/learn/$slug',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicHooksSecurityScanRoute =
+  ApiPublicHooksSecurityScanRouteImport.update({
+    id: '/api/public/hooks/security-scan',
+    path: '/api/public/hooks/security-scan',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedTeacherCourseCourseIdRoute =
   AuthenticatedTeacherCourseCourseIdRouteImport.update({
     id: '/course/$courseId',
@@ -104,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/teacher/bulk': typeof AuthenticatedTeacherBulkRoute
   '/teacher/upload': typeof AuthenticatedTeacherUploadRoute
   '/teacher/course/$courseId': typeof AuthenticatedTeacherCourseCourseIdRoute
+  '/api/public/hooks/security-scan': typeof ApiPublicHooksSecurityScanRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -118,6 +126,7 @@ export interface FileRoutesByTo {
   '/teacher/bulk': typeof AuthenticatedTeacherBulkRoute
   '/teacher/upload': typeof AuthenticatedTeacherUploadRoute
   '/teacher/course/$courseId': typeof AuthenticatedTeacherCourseCourseIdRoute
+  '/api/public/hooks/security-scan': typeof ApiPublicHooksSecurityScanRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +143,7 @@ export interface FileRoutesById {
   '/_authenticated/teacher/bulk': typeof AuthenticatedTeacherBulkRoute
   '/_authenticated/teacher/upload': typeof AuthenticatedTeacherUploadRoute
   '/_authenticated/teacher/course/$courseId': typeof AuthenticatedTeacherCourseCourseIdRoute
+  '/api/public/hooks/security-scan': typeof ApiPublicHooksSecurityScanRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/teacher/bulk'
     | '/teacher/upload'
     | '/teacher/course/$courseId'
+    | '/api/public/hooks/security-scan'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/teacher/bulk'
     | '/teacher/upload'
     | '/teacher/course/$courseId'
+    | '/api/public/hooks/security-scan'
   id:
     | '__root__'
     | '/'
@@ -179,6 +191,7 @@ export interface FileRouteTypes {
     | '/_authenticated/teacher/bulk'
     | '/_authenticated/teacher/upload'
     | '/_authenticated/teacher/course/$courseId'
+    | '/api/public/hooks/security-scan'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -187,6 +200,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BrowseRoute: typeof BrowseRoute
   CourseSlugRoute: typeof CourseSlugRoute
+  ApiPublicHooksSecurityScanRoute: typeof ApiPublicHooksSecurityScanRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -275,6 +289,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLearnSlugRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/hooks/security-scan': {
+      id: '/api/public/hooks/security-scan'
+      path: '/api/public/hooks/security-scan'
+      fullPath: '/api/public/hooks/security-scan'
+      preLoaderRoute: typeof ApiPublicHooksSecurityScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/teacher/course/$courseId': {
       id: '/_authenticated/teacher/course/$courseId'
       path: '/course/$courseId'
@@ -326,6 +347,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BrowseRoute: BrowseRoute,
   CourseSlugRoute: CourseSlugRoute,
+  ApiPublicHooksSecurityScanRoute: ApiPublicHooksSecurityScanRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
