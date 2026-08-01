@@ -79,6 +79,12 @@ function BulkUpload() {
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const check = validateUpload("csv", { name: file.name, size: file.size, type: file.type });
+    if (!check.ok) {
+      toast.error(check.error);
+      e.target.value = "";
+      return;
+    }
     setRaw(await file.text());
   }
 
