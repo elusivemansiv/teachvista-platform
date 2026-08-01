@@ -136,6 +136,9 @@ function BulkUpload() {
               onChange={onFile}
               className="mt-1.5 block w-full rounded-xl border border-border bg-background px-3 py-2 text-sm file:mr-3 file:rounded-full file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {UPLOAD_RULES.csv.extensions.join(", ")} only · max {formatBytes(UPLOAD_RULES.csv.maxBytes)}.
+            </p>
             <Button variant="ghost" size="sm" className="mt-2 rounded-full" onClick={downloadCsvTemplate}>
               <Download className="h-4 w-4" aria-hidden="true" /> Download CSV template
             </Button>
