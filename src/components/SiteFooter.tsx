@@ -51,6 +51,7 @@ export function SiteFooter() {
           <p className="mt-3 max-w-xs text-sm text-muted-foreground">
             Learn IELTS from experienced teachers. Structured video courses, mock tests, and daily practice for every band.
           </p>
+          <DevelopedBy />
         </div>
         <div>
           <h4 className="mb-3 font-semibold">Learn</h4>
