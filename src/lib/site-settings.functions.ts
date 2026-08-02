@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type FooterSettings = {
+  show_developed_by: boolean;
   show_developer1: boolean;
   developer1_name: string;
   developer1_url: string;
@@ -11,9 +12,10 @@ export type FooterSettings = {
   developer2_url: string;
 };
 
-const COLS = "show_developer1, developer1_name, developer1_url, show_developer2, developer2_name, developer2_url";
+const COLS = "show_developed_by, show_developer1, developer1_name, developer1_url, show_developer2, developer2_name, developer2_url";
 
 const FALLBACK: FooterSettings = {
+  show_developed_by: true,
   show_developer1: true,
   developer1_name: "Stradigtech",
   developer1_url: "https://stradigtech.com/",
@@ -52,6 +54,7 @@ export const updateFooterSettings = createServerFn({ method: "POST" })
     const { error } = await context.supabase
       .from("site_settings")
       .update({
+        show_developed_by: data.show_developed_by,
         show_developer1: data.show_developer1,
         developer1_name: data.developer1_name.trim(),
         developer1_url: data.developer1_url.trim(),

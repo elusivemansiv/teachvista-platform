@@ -7,7 +7,7 @@ import { getFooterSettings } from "@/lib/site-settings.functions";
 function DevelopedBy() {
   const fetchSettings = useServerFn(getFooterSettings);
   const { data } = useQuery({ queryKey: ["footer-settings"], queryFn: () => fetchSettings() });
-  if (!data) return null;
+  if (!data || !data.show_developed_by) return null;
 
   const credits = [
     { show: data.show_developer1, name: data.developer1_name, url: data.developer1_url },
