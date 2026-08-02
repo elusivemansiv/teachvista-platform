@@ -9,6 +9,7 @@ import { listAuditLog, listModerationQueue, reviewCourse, reviewLesson, type Mod
 import { categoryLabel } from "@/lib/courses";
 import { toast } from "sonner";
 import { ShieldCheck, Check, X, Clock } from "lucide-react";
+import { FooterCreditsSettings } from "@/components/FooterCreditsSettings";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: ({ context }) => {
@@ -41,7 +42,7 @@ const TABS: { value: ModerationStatus | "all"; label: string }[] = [
 
 function Queue() {
   const [tab, setTab] = useState<ModerationStatus | "all">("pending");
-  const [view, setView] = useState<"queue" | "audit">("queue");
+  const [view, setView] = useState<"queue" | "audit" | "settings">("queue");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const queryClient = useQueryClient();
   const fetchQueue = useServerFn(listModerationQueue);
@@ -98,7 +99,7 @@ function Queue() {
       </header>
 
       <div role="tablist" aria-label="Admin section" className="flex gap-2">
-        {(["queue", "audit"] as const).map((v) => (
+        {(["queue", "audit", "settings"] as const).map((v) => (
           <button
             key={v}
             role="tab"
@@ -108,12 +109,20 @@ function Queue() {
               view === v ? "bg-foreground text-background" : "bg-secondary hover:bg-secondary/80"
             }`}
           >
-            {v === "queue" ? "Queue" : "Audit log"}
+            {v === "queue" ? "Queue" : v === "audit" ? "Audit log" : "Site settings"}
           </button>
         ))}
       </div>
 
-      {view === "audit" ? (
+      {view === "settings" ? (
+        <section className="rounded-3xl border border-border bg-card p-6">
+          <h2 className="font-display text-xl font-bold">Footer credits</h2>
+          <p className="mb-5 text-sm text-muted-foreground">
+            Control the "Developed By" line shown in the site footer.
+          </p>
+          <FooterCreditsSettings />
+        </section>
+      ) : view === "audit" ? (
         <section className="rounded-3xl border border-border bg-card p-6">
           <h2 className="font-display text-xl font-bold">Moderation audit log</h2>
           <p className="text-sm text-muted-foreground">Every approval, rejection and reviewer note, newest first.</p>
