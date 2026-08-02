@@ -16,8 +16,8 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "BandPath — Master IELTS with expert-led video courses" },
       { name: "description", content: "Structured IELTS video courses across Listening, Reading, Writing and Speaking. Popular, trending and newly uploaded lessons from expert teachers." },
-      { property: "og:title", content: "BandPath — Master IELTS" },
-      { property: "og:description", content: "Reach your target band with structured video courses and mock tests." },
+      { property: "og:title", content: "BandPath — Master IELTS with expert-led video courses" },
+      { property: "og:description", content: "Structured IELTS video courses across Listening, Reading, Writing and Speaking. Popular, trending and newly uploaded lessons from expert teachers." },
     ],
   }),
   component: HomePage,
