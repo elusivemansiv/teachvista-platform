@@ -543,6 +543,7 @@ export type Database = {
           developer2_name: string
           developer2_url: string
           id: number
+          show_developed_by: boolean
           show_developer1: boolean
           show_developer2: boolean
           updated_at: string
@@ -553,6 +554,7 @@ export type Database = {
           developer2_name?: string
           developer2_url?: string
           id?: number
+          show_developed_by?: boolean
           show_developer1?: boolean
           show_developer2?: boolean
           updated_at?: string
@@ -563,6 +565,7 @@ export type Database = {
           developer2_name?: string
           developer2_url?: string
           id?: number
+          show_developed_by?: boolean
           show_developer1?: boolean
           show_developer2?: boolean
           updated_at?: string
