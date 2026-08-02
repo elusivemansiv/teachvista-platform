@@ -1,5 +1,39 @@
 import { Link } from "@tanstack/react-router";
 import { GraduationCap } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getFooterSettings } from "@/lib/site-settings.functions";
+
+function DevelopedBy() {
+  const fetchSettings = useServerFn(getFooterSettings);
+  const { data } = useQuery({ queryKey: ["footer-settings"], queryFn: () => fetchSettings() });
+  if (!data) return null;
+
+  const credits = [
+    { show: data.show_developer1, name: data.developer1_name, url: data.developer1_url },
+    { show: data.show_developer2, name: data.developer2_name, url: data.developer2_url },
+  ].filter((c) => c.show && c.name);
+
+  if (!credits.length) return null;
+
+  return (
+    <p className="mt-4 text-sm font-medium text-destructive">
+      Developed By{" "}
+      {credits.map((c, i) => (
+        <span key={c.name}>
+          {i > 0 && " & "}
+          {c.url ? (
+            <a href={c.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+              {c.name}
+            </a>
+          ) : (
+            c.name
+          )}
+        </span>
+      ))}
+    </p>
+  );
+}
 
 export function SiteFooter() {
   return (
@@ -17,6 +51,7 @@ export function SiteFooter() {
           <p className="mt-3 max-w-xs text-sm text-muted-foreground">
             Learn IELTS from experienced teachers. Structured video courses, mock tests, and daily practice for every band.
           </p>
+          <DevelopedBy />
         </div>
         <div>
           <h4 className="mb-3 font-semibold">Learn</h4>

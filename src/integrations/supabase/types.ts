@@ -536,6 +536,39 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          developer1_name: string
+          developer1_url: string
+          developer2_name: string
+          developer2_url: string
+          id: number
+          show_developer1: boolean
+          show_developer2: boolean
+          updated_at: string
+        }
+        Insert: {
+          developer1_name?: string
+          developer1_url?: string
+          developer2_name?: string
+          developer2_url?: string
+          id?: number
+          show_developer1?: boolean
+          show_developer2?: boolean
+          updated_at?: string
+        }
+        Update: {
+          developer1_name?: string
+          developer1_url?: string
+          developer2_name?: string
+          developer2_url?: string
+          id?: number
+          show_developer1?: boolean
+          show_developer2?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
