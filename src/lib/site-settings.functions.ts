@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export type FooterSettings = {
+  show_developed_by: boolean;
   show_developer1: boolean;
   developer1_name: string;
   developer1_url: string;
@@ -11,7 +12,7 @@ export type FooterSettings = {
   developer2_url: string;
 };
 
-const COLS = "show_developer1, developer1_name, developer1_url, show_developer2, developer2_name, developer2_url";
+const COLS = "show_developed_by, show_developer1, developer1_name, developer1_url, show_developer2, developer2_name, developer2_url";
 
 const FALLBACK: FooterSettings = {
   show_developer1: true,
