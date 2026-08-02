@@ -45,6 +45,13 @@ export function FooterCreditsSettings() {
         mut.mutate(value);
       }}
     >
+      <div className="flex items-center gap-3 rounded-2xl border border-border bg-secondary/30 px-4 py-3.5">
+        <Switch id="show-developed-by" checked={value.show_developed_by} onCheckedChange={(v) => set({ show_developed_by: v })} />
+        <Label htmlFor="show-developed-by" className="text-sm">
+          Show the entire “Developed By” line in the footer
+        </Label>
+      </div>
+
       <Block
         title="First Developer / Company"
         show={value.show_developer1}
