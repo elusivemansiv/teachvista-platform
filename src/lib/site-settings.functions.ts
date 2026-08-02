@@ -15,6 +15,7 @@ export type FooterSettings = {
 const COLS = "show_developed_by, show_developer1, developer1_name, developer1_url, show_developer2, developer2_name, developer2_url";
 
 const FALLBACK: FooterSettings = {
+  show_developed_by: true,
   show_developer1: true,
   developer1_name: "Stradigtech",
   developer1_url: "https://stradigtech.com/",
