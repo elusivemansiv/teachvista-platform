@@ -54,6 +54,7 @@ export const updateFooterSettings = createServerFn({ method: "POST" })
     const { error } = await context.supabase
       .from("site_settings")
       .update({
+        show_developed_by: data.show_developed_by,
         show_developer1: data.show_developer1,
         developer1_name: data.developer1_name.trim(),
         developer1_url: data.developer1_url.trim(),
