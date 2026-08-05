@@ -72,13 +72,14 @@ function Hero() {
           </div>
         </div>
         <div className="relative">
-          <div className="relative overflow-hidden rounded-[2rem] bg-white p-6 shadow-2xl shadow-primary/20 ring-1 ring-border">
-            <img src={hero} alt="Student learning IELTS with laptop and headphones" width={1280} height={960} className="w-full rounded-2xl" />
-            <div className="pointer-events-none absolute -right-4 -top-4 rotate-6 rounded-2xl bg-accent px-4 py-3 text-accent-foreground shadow-lg">
+          <div className="relative overflow-visible rounded-[2rem] bg-white p-6 shadow-2xl shadow-primary/20 ring-1 ring-border">
+            <img src={hero} alt="Student learning IELTS with laptop and headphones" width={1280} height={960} className="w-full rounded-2xl object-contain" />
+            <div className="pointer-events-none absolute right-2 top-2 rotate-6 rounded-2xl bg-accent px-4 py-3 text-accent-foreground shadow-lg sm:right-4 sm:top-4">
               <div className="text-xs font-medium">Target</div>
               <div className="font-display text-2xl font-extrabold">Band 8.0</div>
             </div>
-            <div className="pointer-events-none absolute -bottom-4 -left-4 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-lg ring-1 ring-border">
+            <div className="pointer-events-none absolute bottom-2 left-2 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-lg ring-1 ring-border sm:bottom-4 sm:left-4">
+
               <div className="grid h-10 w-10 place-items-center rounded-full bg-primary/10 text-primary">
                 <Award className="h-5 w-5" />
               </div>
