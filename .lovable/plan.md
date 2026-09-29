@@ -29,7 +29,11 @@ Restyle both signed-in portals with a cleaner, more polished dashboard look. No 
 - **Admin** (`src/routes/_authenticated/admin.tsx`): restyled tab navigation, moderation queue cards with clearer status badges and action buttons, audit log table, site-settings panels.
 - **Admin security** (`src/routes/_authenticated/admin-security.tsx`): scan-run history and findings list restyled with severity badges and cleaner drill-down.
 
-### 5. Shared components
+### 5. Browse search & filters polish (`src/routes/browse.tsx`)
+- Restyle the existing subject (category), difficulty (level), and duration filters to match the new design system: cleaner filter chips, clearer active states, and a tidy sort/pagination bar.
+- Keep the existing debounced search, sorting, and pagination behavior unchanged.
+
+### 6. Shared components
 - `CourseCard`, stat cards, badges, buttons: adopt new tokens, rounded-2xl corners, softer shadows, consistent focus rings.
 
 ## Technical notes
