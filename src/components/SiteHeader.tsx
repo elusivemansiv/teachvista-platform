@@ -72,13 +72,13 @@ export function SiteHeader() {
         </div>
 
         {signedIn ? (
-          <Link to="/dashboard">
+          <Link to="/dashboard" className="ml-auto">
             <Button size="sm" variant="secondary" className="rounded-full">
               <User className="mr-1 h-4 w-4" /> Account
             </Button>
           </Link>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2">
             <Link to="/auth" search={{ mode: "signin" }}>
               <Button size="sm" variant="ghost" className="rounded-full">
                 Sign in
